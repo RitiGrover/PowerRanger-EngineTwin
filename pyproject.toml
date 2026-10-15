@@ -1,0 +1,31 @@
+[project]
+name = "enginetwin"
+version = "0.1.0"
+description = "EngineTwin: engine fault signatures and efficiency sweet-spot finder"
+requires-python = ">=3.11"
+dependencies = [
+    "numpy",
+    "scipy",
+    "pandas",
+    "scikit-learn",
+    "streamlit",
+    "plotly",
+    "openpyxl",
+    "py7zr",
+    "soundfile",
+]
+
+[project.optional-dependencies]
+dev = ["pytest"]
+dl = ["torch"]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
