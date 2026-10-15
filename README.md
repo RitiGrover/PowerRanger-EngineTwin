@@ -15,7 +15,7 @@ The assumed signatures are:
 
 - Misfire: one cylinder fires weakly, which adds a line at order 0.5.
 - Knock: short bursts near 6.5 kHz just after firing.
-- Valve wear: a tick near 3 kHz at the firing rate.
+- Valve wear: a tick near 3 kHz, once per two revolutions for each worn valve (one or two valves).
 
 These are textbook style assumptions. They have not been checked against real fault recordings.
 
@@ -35,3 +35,41 @@ If real fault audio becomes available, run the same signal tools on it:
 - `envelope_spectrum` for valve ticks.
 
 If the lines sit at different frequencies, change the constants at the top of `src/enginetwin/simulator.py` and regenerate the data.
+
+## Simulated training data
+
+`make_labelled_splits` (see `scripts/make_labelled_dataset.py`) writes five cached splits of 2 s windows to `cache/`: train, validation, test at the same conditions, test at unseen speeds (3000 to 5000 rpm) and test at heavy noise (5 dB signal to noise, against 15 to 25 dB elsewhere). Window i has the same speed, load and noise level in every fault class, so the operating point cannot give the label away.
+
+The efficiency truth for each window is the healthy efficiency (nearest cell of the real Ocslab map) less an assumed fault loss: misfire 25%, knock 8% and valve wear 3% of efficiency at full severity (`enginetwin.losses`). These loss rates are assumptions, not measurements, and the dashboard lets the user change them. `wear_series` simulates one valve wearing from new to fully worn over many days.
+
+## Running it
+
+```
+python -m venv .venv
+.venv\Scripts\pip install -e .[dev,dl]
+```
+
+Build the cached data and models once (nothing is trained while the dashboard runs). Run these from the project folder with `python -I`:
+
+1. `scripts/make_labelled_dataset.py` writes the simulated splits to `cache/`.
+2. `scripts/train_classical.py` (SVM and softmax), `scripts/train_obd_ann.py`, `scripts/train_cnn.py`, `scripts/train_efficiency.py` and `scripts/train_health_and_autoencoder.py` fit and score the models.
+3. `scripts/prepare_dashboard.py` bundles the diagnoser, `scripts/replay_demo.py` replays one held-out Ocslab trip and one VED trip, and `scripts/measure_latency.py` writes the latency and results tables.
+
+Then start the dashboard with `streamlit run app.py`. Tests run with `pytest`; tests that need the downloaded data or the trained models skip when `data/` or `cache/` is missing.
+
+## What the models do
+
+- SVM and softmax regression on 44 hand-made features (orders, band energies relative to the noise floor, envelope rhythm, per-cylinder spread, spectral and time statistics, OBD summary values). Softmax weights give the plain-language reasons.
+- A small network on the OBD readings alone, to show what OBD can and cannot see.
+- A multimodal CNN on sound and vibration spectrograms plus OBD values, one output per fault so two faults can show at once, with an occlusion heat map.
+- A healthy-baseline autoencoder with an alarm level that depends on the estimated noise level.
+- Valve wear, severity and a 100-to-0 health index with a time-to-service forecast.
+- An efficiency model (boosted trees and a small network) trained on Ocslab drivers and checked on held-out drivers and on VED cars, and an optimiser that picks the most efficient gear for the power needed.
+
+## Known limits
+
+- All fault results are on simulated sound and vibration. They show the models find the patterns put into the simulator, not accuracy on a real engine.
+- Training noise runs from 10 to 25 dB. At 5 dB the CNN and softmax degrade and the SVM fails; at 0 dB all fail. The autoencoder is reliable down to about 7 to 10 dB.
+- Alert latency is 1.0 to 1.7 s against a target of under 1 s.
+- The efficiency model validates on held-out Ocslab drivers but not on VED: VED has no torque, so its efficiency rests on an assumed torque. The fuel unit of the Ocslab data is inferred as microlitres per second.
+- Fault efficiency losses (misfire 25%, knock 8%, valve wear 3% at full severity), the vehicle parameters, the knock rule and the fuel price (105 rupees per litre) are assumptions; the dashboard sliders change the loss rates.
