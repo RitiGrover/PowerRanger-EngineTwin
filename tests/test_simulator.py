@@ -144,6 +144,43 @@ def test_noise_sigma_sets_the_background_noise_level():
     assert np.max(np.abs(quiet_gaps(silent.sound, silent.sound_fs, rpm))) < 0.001  # only the pulse tails remain
 
 
+def noise_part(channel, **kwargs):
+    """The noise a window carries: the noisy render minus the same-seed render with the noise switched off."""
+    noisy = simulate_window(**kwargs)
+    clean = simulate_window(**{**kwargs, "noise_sigma": 0.0, "snr_db": None})
+    return getattr(noisy, channel) - getattr(clean, channel)
+
+
+@pytest.mark.parametrize("snr_db", [20, 5])
+def test_snr_sets_noise_relative_to_the_healthy_combustion_signal(snr_db):
+    # A pulse exp(-t/tau) sin(2 pi f t) carries energy tau/4, and one firing arrives every 30/rpm s, so the healthy
+    # signal power is (rpm/30) * tau/4. Noise sigma = RMS / 10^(snr/20). tau is 4 ms for sound and 2 ms for vibration.
+    rpm = 2000
+    for channel, tau in (("sound", 0.004), ("vibration", 0.002)):
+        rms = np.sqrt(rpm / 30 * tau / 4)
+        expected_sigma = rms / 10 ** (snr_db / 20)
+
+        noise = noise_part(channel, rpm=rpm, seed=2, snr_db=snr_db)
+
+        assert np.std(noise) == pytest.approx(expected_sigma, rel=0.05)
+
+
+def test_snr_gives_every_fault_the_same_noise_level_so_noise_does_not_give_the_label_away():
+    rpm = 2000
+    healthy = noise_part("sound", rpm=rpm, seed=2, snr_db=10)
+    for fault in ("misfire", "knock", "valve_wear"):
+        faulty = noise_part("sound", rpm=rpm, seed=2, fault=fault, severity=1.0, snr_db=10)
+
+        assert np.std(faulty) == pytest.approx(np.std(healthy), rel=0.01)
+
+
+def test_snr_takes_over_from_noise_sigma_when_both_are_given():
+    both = noise_part("sound", rpm=2000, seed=2, snr_db=20, noise_sigma=0.5)
+    snr_only = noise_part("sound", rpm=2000, seed=2, snr_db=20)
+
+    assert np.std(both) == pytest.approx(np.std(snr_only), rel=0.001)
+
+
 def valve_share(w):
     return band_energy_fraction(w.vibration, w.vibration_fs, 2500, 3500)
 
@@ -164,13 +201,39 @@ def envelope_line(w, hz):
     return amplitudes[np.abs(freqs - hz) <= 1.0].max()
 
 
-def test_valve_ticks_repeat_at_the_firing_rate():
-    rpm = 2400  # a valve event per firing: 2400 / 30 = 80 Hz; nothing at half that rate
-    healthy = simulate_window(rpm=rpm, seed=4)
-    wear = simulate_window(rpm=rpm, fault="valve_wear", severity=1.0, seed=4)
+def tick_share_near(w, tick_times, width_s=0.003):
+    """Share of the 2.5-3.5 kHz vibration energy that falls in the `width_s` after each of `tick_times`."""
+    band = bandpass(w.vibration, w.vibration_fs, 2500, 3500) ** 2
+    inside = sum(band[int(t * w.vibration_fs) : int((t + width_s) * w.vibration_fs)].sum() for t in tick_times)
+    return inside / band.sum()
 
-    assert envelope_line(wear, rpm / 30) > 3 * envelope_line(healthy, rpm / 30)
-    assert envelope_line(wear, rpm / 60) < 0.1 * envelope_line(wear, rpm / 30)
+
+def test_one_worn_valve_ticks_once_per_two_revolutions_at_its_own_crank_angle():
+    # 2400 rpm: a firing every 12.5 ms, a full cycle (two revolutions) every 50 ms. Cylinder 3 fires second, at 12.5 ms,
+    # and the valve event lands 90 degrees later (90 / (6 * 2400) = 6.25 ms), so ticks sit at 18.75 ms + k * 50 ms.
+    rpm = 2400
+    w = simulate_window(rpm=rpm, fault="valve_wear", severity=1.0, seed=4, worn_valves=(3,))
+    ticks = [0.01875 + 0.05 * k for k in range(39)]
+
+    assert tick_share_near(w, ticks) > 0.6  # steady noise would put only 3/50 = 6% there; the rest is combustion leakage
+    assert envelope_line(w, rpm / 120) > 3 * envelope_line(simulate_window(rpm=rpm, seed=4), rpm / 120)
+
+
+def test_two_worn_valves_tick_at_both_of_their_crank_angles():
+    # Cylinders 1 and 4 fire at 0 and 25 ms, so the valve events are at 6.25 ms and 31.25 ms in each 50 ms cycle.
+    rpm = 2400
+    w = simulate_window(rpm=rpm, fault="valve_wear", severity=1.0, seed=4, worn_valves=(1, 4))
+    cylinder_1 = [0.00625 + 0.05 * k for k in range(39)]
+    cylinder_4 = [0.03125 + 0.05 * k for k in range(39)]
+
+    assert tick_share_near(w, cylinder_1 + cylinder_4) > 0.6  # chance level is 12%
+    assert tick_share_near(w, cylinder_1) > 0.25 and tick_share_near(w, cylinder_4) > 0.25  # each valve carries its own share
+
+
+@pytest.mark.parametrize("valves", [(), (1, 2, 3), (0,), (5,)])
+def test_worn_valves_must_be_one_or_two_cylinders_between_1_and_4(valves):
+    with pytest.raises(ValueError):
+        simulate_window(rpm=2400, fault="valve_wear", severity=1.0, worn_valves=valves)
 
 
 def test_valve_wear_is_not_mistaken_for_knock():
@@ -223,3 +286,11 @@ def test_combined_faults_combine_their_obd_effects():
     assert mean_obd("engine_speed", **both) < mean_obd("engine_speed", rpm=2000) - 20
     assert mean_obd("short_term_fuel_trim_bank1", **both) > mean_obd("short_term_fuel_trim_bank1", rpm=2000) + 3
     assert mean_obd("timing_advance", **both) < mean_obd("timing_advance", rpm=2000) - 3
+
+
+def test_a_valve_tick_or_knock_burst_that_would_land_after_the_window_ends_is_dropped_not_an_error():
+    # At 2400 rpm cylinder 3 fires at 12.5 ms and its valve ticks at 18.75 ms: just past the end of a 17.5 ms window.
+    for fault in ("valve_wear", "knock"):
+        w = simulate_window(rpm=2400, fault=fault, severity=1.0, seed=1, duration_s=0.0175, worn_valves=(3,))
+
+        assert len(w.sound) == len(w.vibration) == 280

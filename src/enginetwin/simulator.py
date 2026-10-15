@@ -16,13 +16,18 @@ _VIBRATION_PULSE = (1200.0, 0.002)
 _KNOCK_BURST = (6500.0, 0.0005)  # detonation rings the block at 6-7 kHz and dies out in about a millisecond
 _KNOCK_AMPLITUDE = 0.5  # relative to a normal combustion pulse of 1.0
 _VALVE_TICK = (3000.0, 0.0005)  # a worn valve clatters at ~3 kHz, well below knock's 6-7 kHz
-_VALVE_AMPLITUDE = 0.6
+_VALVE_AMPLITUDE = 1.2  # one tick per cycle now, so twice the old per-firing amplitude keeps the same tick energy
 _VALVE_DELAY_DEG = 90.0  # crank degrees after each firing at which the valve event lands
 
 
 def _pulse(resonance_hz: float, decay_s: float) -> np.ndarray:
     t = np.arange(int(5 * decay_s * FS)) / FS
     return np.exp(-t / decay_s) * np.sin(2 * np.pi * resonance_hz * t)
+
+
+def _healthy_rms(rpm: float, pulse) -> float:
+    """RMS of a healthy channel: one pulse exp(-t/tau) sin(2 pi f t) carries energy tau/4 and one firing arrives every 30/rpm s."""
+    return float(np.sqrt(rpm / 30.0 * pulse[1] / 4.0))
 
 
 def _firing_times(rpm: float, duration_s: float) -> np.ndarray:
@@ -33,6 +38,8 @@ def _firing_times(rpm: float, duration_s: float) -> np.ndarray:
 def _add_pulses(signal, times, amplitudes, shape):
     for t, a in zip(times, amplitudes):
         start = int(round(t * FS))
+        if start >= len(signal):
+            continue  # the event happens after the window has ended
         end = min(start + len(shape), len(signal))
         signal[start:end] += a * shape[: end - start]
 
@@ -65,8 +72,18 @@ def simulate_window(
     cylinder: int = 2,
     load: float = 0.4,
     noise_sigma: float = NOISE_SIGMA,
+    snr_db: float | None = None,
+    worn_valves: tuple = (1,),
 ) -> Window:
-    """One window of engine sound, vibration and OBD data. Cylinder 1 fires at t = 0, then 3, 4, 2 (180 degrees apart)."""
+    """One window of engine sound, vibration and OBD data. Cylinder 1 fires at t = 0, then 3, 4, 2 (180 degrees apart).
+
+    `snr_db` sets each channel's noise from the RMS of a healthy engine at this rpm, so every fault gets the same
+    noise level. When given it replaces `noise_sigma`.
+
+    Valve wear ticks once per two revolutions for each worn valve; `worn_valves` names the one or two cylinders whose
+    valve is worn."""
+    if not 1 <= len(worn_valves) <= 2 or not set(worn_valves) <= {1, 2, 3, 4}:
+        raise ValueError(f"worn_valves must be one or two cylinders from 1 to 4, got {worn_valves!r}")
     faults = fault.split("+")  # combined faults are written "misfire+knock"; each applies at the same severity
     rng = np.random.default_rng(seed)
     n = int(duration_s * FS)
@@ -77,8 +94,12 @@ def simulate_window(
     if "misfire" in faults:
         amplitudes = np.where(firing_cylinder == cylinder, amplitudes * (1 - severity), amplitudes)
 
-    sound = rng.normal(0.0, noise_sigma, n)
-    vibration = rng.normal(0.0, noise_sigma, n)
+    sound_sigma, vibration_sigma = noise_sigma, noise_sigma
+    if snr_db is not None:
+        sound_sigma = _healthy_rms(rpm, _SOUND_PULSE) / 10 ** (snr_db / 20)
+        vibration_sigma = _healthy_rms(rpm, _VIBRATION_PULSE) / 10 ** (snr_db / 20)
+    sound = rng.normal(0.0, sound_sigma, n)
+    vibration = rng.normal(0.0, vibration_sigma, n)
     _add_pulses(sound, times, amplitudes, _pulse(*_SOUND_PULSE))
     _add_pulses(vibration, times, amplitudes, _pulse(*_VIBRATION_PULSE))
 
@@ -91,9 +112,10 @@ def simulate_window(
             _add_pulses(signal, burst_times, burst_amplitudes, _pulse(*_KNOCK_BURST))
 
     if "valve_wear" in faults:
-        # One tick per firing, at a fixed crank angle after it; severity scales how hard the worn valve slaps.
-        tick_times = times + _VALVE_DELAY_DEG / (6.0 * rpm)
-        tick_amplitudes = _VALVE_AMPLITUDE * severity * rng.uniform(0.7, 1.3, len(times))
+        # A worn valve opens once per cycle (two revolutions): one tick after its cylinder fires. Severity scales the slap.
+        worn = np.isin(firing_cylinder, worn_valves)
+        tick_times = times[worn] + _VALVE_DELAY_DEG / (6.0 * rpm)
+        tick_amplitudes = _VALVE_AMPLITUDE * severity * rng.uniform(0.7, 1.3, worn.sum())
         for signal in (sound, vibration):
             _add_pulses(signal, tick_times, tick_amplitudes, _pulse(*_VALVE_TICK))
 
