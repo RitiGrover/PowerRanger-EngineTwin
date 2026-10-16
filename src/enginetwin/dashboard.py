@@ -6,8 +6,10 @@ from plotly.subplots import make_subplots
 
 from enginetwin.plots import efficiency_heatmap
 from enginetwin.schema import SOURCES
+from enginetwin.theme import FAULT_SCALE, SEQUENTIAL
 
-ACTUAL, OPTIMISED, ALERT, NORMAL = "#7f8c9a", "#1f9d6b", "#d9534f", "#4a7fb5"
+ACTUAL, OPTIMISED, ALERT, NORMAL = "#7f8c9a", "#1f9d6b", "#f08f80", "#8fc1e3"
+PASTEL_SCALE = [[0.0, "#1b1f2e"], [0.2, "#4a4e8c"], [0.4, "#8f86c9"], [0.6, "#e0a3c2"], [0.8, "#f7c9a8"], [1.0, "#fff1dc"]]
 KEY_ORDERS = ((0.5, "0.5 (misfire)"), (1.0, "1"), (2.0, "2 (firing)"), (4.0, "4"))
 DRIVE_MODES = {  # engine speed and load a driver in each mode typically holds (assumed)
     "Eco": {"rpm": 1800.0, "load": 0.35, "speed_kmh": 60.0},
@@ -38,14 +40,14 @@ def gauge_figure(name, value, low, high, unit, source) -> go.Figure:
 def spectrogram_figure(spec, duration_s, channel, source) -> go.Figure:
     """`spec` is (frequency band, time frame) as built by enginetwin.spectrograms (64 bands up to 8 kHz)."""
     bands, frames = spec.shape
-    fig = go.Figure(go.Heatmap(z=spec, x=np.linspace(0, duration_s, frames), y=np.linspace(0, 8000, bands), colorscale="Viridis",
+    fig = go.Figure(go.Heatmap(z=spec, x=np.linspace(0, duration_s, frames), y=np.linspace(0, 8000, bands), colorscale=PASTEL_SCALE,
                                colorbar={"title": "log10 level"}))
     fig.update_layout(title=tagged_title(f"{channel} spectrogram", source), xaxis_title="Time (s)", yaxis_title="Frequency (Hz)")
     return fig
 
 
 def order_spectrum_figure(orders, amplitudes, source) -> go.Figure:
-    fig = go.Figure(go.Scatter(x=orders, y=amplitudes, mode="lines", line={"color": NORMAL}))
+    fig = go.Figure(go.Scatter(x=orders, y=amplitudes, mode="lines", line={"color": "#8fc1e3", "width": 2}, fill="tozeroy", fillcolor="rgba(143,193,227,.18)"))
     for order, label in KEY_ORDERS:
         fig.add_vline(x=order, line={"dash": "dot", "color": ALERT})
         fig.add_annotation(x=order, y=1, yref="paper", text=label, showarrow=False, yanchor="bottom")
@@ -54,7 +56,7 @@ def order_spectrum_figure(orders, amplitudes, source) -> go.Figure:
 
 
 def envelope_figure(freqs, amplitudes, rpm, source) -> go.Figure:
-    fig = go.Figure(go.Scatter(x=freqs, y=amplitudes, mode="lines", line={"color": NORMAL}))
+    fig = go.Figure(go.Scatter(x=freqs, y=amplitudes, mode="lines", line={"color": "#c3a6e8", "width": 2}, fill="tozeroy", fillcolor="rgba(195,166,232,.18)"))
     for hz, label in ((rpm / 120.0, "once per cycle (valve)"), (rpm / 30.0, "once per firing")):
         fig.add_vline(x=hz, line={"dash": "dot", "color": ALERT}, annotation_text=label)
     fig.update_layout(title=tagged_title("Envelope spectrum of the valve band", source), xaxis_title="Repeat rate (Hz)", yaxis_title="Amplitude")
@@ -82,7 +84,7 @@ def heat_overlay_figure(spec, heat, source) -> go.Figure:
     fig = go.Figure(
         [
             go.Heatmap(z=spec, colorscale="Greys", showscale=False),
-            go.Heatmap(z=np.where(heat > 0, heat, np.nan), colorscale="Hot", opacity=0.7, colorbar={"title": "Importance"}),
+            go.Heatmap(z=np.where(heat > 0, heat, np.nan), colorscale=FAULT_SCALE, opacity=0.7, colorbar={"title": "Importance"}),
         ]
     )
     fig.update_layout(title=tagged_title("What triggered the diagnosis", source), xaxis_title="Time frame", yaxis_title="Frequency band")
@@ -92,7 +94,8 @@ def heat_overlay_figure(spec, heat, source) -> go.Figure:
 def efficiency_map_figure(cells, current, optimal, source) -> go.Figure:
     fig = efficiency_heatmap(cells, source)
     fig.layout.title.text = tagged_title("Engine efficiency map", source)
-    for name, (rpm, torque), symbol, colour in (("Current point", current, "circle", "white"), ("Optimal point", optimal, "diamond", "#ffd166")):
+    fig.update_layout(legend={"orientation": "h", "y": -0.18, "x": 0})
+    for name, (rpm, torque), symbol, colour in (("Current point", current, "circle", "white"), ("Optimal point", optimal, "diamond", "gold")):
         fig.add_trace(go.Scatter(x=[rpm], y=[torque], mode="markers", name=name,
                                  marker={"symbol": symbol, "size": 14, "color": colour, "line": {"color": "black", "width": 1.5}}))
     return fig
@@ -124,7 +127,7 @@ def health_figure(days, true_health, estimated_health, service_day, source) -> g
 
 
 def confusion_figure(matrix, labels, title, source) -> go.Figure:
-    fig = go.Figure(go.Heatmap(z=matrix, x=labels, y=labels, colorscale="Blues", text=matrix, texttemplate="%{text}", showscale=False))
+    fig = go.Figure(go.Heatmap(z=matrix, x=labels, y=labels, colorscale=SEQUENTIAL, text=matrix, texttemplate="%{text}", showscale=False))
     fig.update_layout(title=tagged_title(title, source), xaxis_title="Predicted", yaxis_title="True", yaxis={"autorange": "reversed"})
     return fig
 

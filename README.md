@@ -1,4 +1,4 @@
-# PowerRanger-EngineTwin
+# Power Ranger
 Engine fault signatures and efficiency sweet spot finder from multi-sensor engine data
 
 ## What is real and what is simulated
@@ -57,17 +57,17 @@ Build the cached data and models once (nothing is trained while the dashboard ru
 
 Then start the dashboard with `streamlit run app.py`. Tests run with `pytest`; tests that need the downloaded data or the trained models skip when `data/` or `cache/` is missing.
 
-### Measured LiU-ICE live engine and real-data lab
+### Measured LiU-ICE guard
 
-The **Live engine** replays a healthy LiU-ICE engine-bench trajectory and lets the user inject one of three exact benchmark fault types from the sidebar. The **Real data lab** exposes held-out measured fault runs and shows how one fault propagates across pressure, airflow, fuel, throttle and speed before the consistency guard confirms it. These measured views stay separate from the controlled acoustic simulator in **Sensor fusion**. Prepared data and model bundles are included. Rebuild them from the public source with:
+The **Measured guard** tab replays three held-out LiU-ICE engine-bench trajectories through redundant-sensor consistency models. It keeps this measured sensor-bias evidence separate from the simulated acoustic fault twin. Build its ignored local data artifact with:
 
 ```powershell
 python scripts/prepare_liu_guard.py
 ```
 
-The script downloads the public benchmark only when needed. It validates archive paths, creates five-second features, trains on healthy windows from the training trajectories and saves only the three held-out dashboard runs. It rebuilds the estimators with the installed scikit-learn version rather than loading an incompatible serialized model.
+The script downloads the public benchmark only when needed, validates archive paths, creates five-second features, trains on healthy windows from the training trajectories, and saves only the three held-out dashboard runs. It rebuilds the estimators with the installed scikit-learn version rather than loading an incompatible serialized model.
 
-If the bundled files are removed, the dashboard starts in clearly labelled **Demo mode** instead of stopping. Demo mode uses the simulator's attached labels, a synthetic efficiency surface and a synthetic trip replay. Its outputs are illustrative and must not be reported as trained-model results.
+If the generated model files or downloaded datasets are not present, the dashboard starts in clearly labelled **Demo mode** instead of stopping. Demo mode uses the simulator's attached labels, a synthetic efficiency surface and a synthetic trip replay so the full interface can be developed and presented. Its outputs are illustrative and must not be reported as trained-model results. Once all required files exist in `cache/`, the dashboard automatically switches to the trained models and real-data views.
 
 ## What the models do
 

@@ -1,0 +1,326 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+:root { --bg:#0a0b0d; --panel:#111316; --panel2:#15181b; --line:#23262b; --line2:#2f3338; --text:#e6e8ea; --muted:#8b9197; --dim:#5d636a;
+  --accent:#a9c4d4; --ok:#b9cf9a; --warn:#d49a6a; --fault:#d9795f;
+  --sans:'Helvetica Neue',Helvetica,Arial,sans-serif; --mono:'Helvetica Neue',Helvetica,Arial,sans-serif; }
+* { box-sizing:border-box; margin:0; padding:0; }
+html, body { background:transparent; color:var(--text); font-family:var(--sans); }
+body { padding:2px 2px 24px; }
+.lbl { font:500 10.5px var(--mono); letter-spacing:.09em; text-transform:uppercase; color:var(--muted); }
+.lbl:before { content:"[ "; color:var(--dim); } .lbl:after { content:" ]"; color:var(--dim); }
+.card { background:var(--panel); border:1px solid var(--line); border-radius:14px; }
+.bar { display:flex; flex-wrap:wrap; align-items:center; gap:8px 10px; justify-content:space-between; margin-bottom:14px; }
+.chips { display:flex; flex-wrap:wrap; gap:6px; }
+.chip, .pill, .vt { font:500 12.5px var(--sans); color:var(--muted); background:transparent; border:1px solid var(--line2); border-radius:999px; padding:8px 14px; cursor:pointer; transition:all .15s; }
+.chip:hover, .pill:hover, .vt:hover { color:var(--text); border-color:#444a51; }
+.chip.on { background:#1a1e22; color:var(--text); border-color:var(--accent); }
+.chip.on.fault { border-color:var(--fault); }
+.pill { font:500 11px var(--mono); letter-spacing:.05em; padding:7px 12px; }
+.vt { font:500 12px var(--sans); padding:8px 16px; } .vt.on { color:var(--text); border-color:var(--accent); background:#14181b; }
+.pill.on { color:var(--accent); border-color:rgba(169,196,212,.55); background:#14181b; }
+.grid { display:grid; grid-template-columns:minmax(0,1fr) 392px; gap:14px; align-items:start; }
+.stagecard { position:relative; overflow:hidden; }
+.stagehead { display:flex; justify-content:space-between; align-items:center; padding:14px 16px 0; gap:10px; flex-wrap:wrap; }
+#stage { position:relative; height:500px; cursor:grab; }
+#stage:active { cursor:grabbing; }
+#tags { position:absolute; inset:0; pointer-events:none; overflow:hidden; }
+.tag { position:absolute; transform:translate(10px,-50%); display:flex; align-items:center; gap:7px; padding:4px 9px 4px 7px; font:500 10.5px var(--mono); letter-spacing:.04em; color:var(--muted);
+  background:rgba(13,15,17,.86); border:1px solid var(--line2); border-radius:999px; white-space:nowrap; transition:border-color .2s,color .2s; }
+.tag i { width:7px; height:7px; border-radius:50%; background:var(--accent); flex:none; }
+.tag b { font-weight:600; color:var(--text); }
+.tag.l { transform:translate(calc(-100% - 10px),-50%); }
+.tag.hot { border-color:rgba(217,121,95,.7); color:#e9c0b3; } .tag.hot i { background:var(--fault); }
+.hover { position:absolute; left:16px; bottom:14px; font:500 11px var(--mono); color:var(--muted); letter-spacing:.04em; }
+.hover b { color:var(--text); font-weight:500; }
+.legend { position:absolute; right:16px; bottom:14px; display:flex; gap:14px; font:500 10.5px var(--mono); color:var(--dim); letter-spacing:.05em; }
+.legend span:before { content:""; display:inline-block; width:7px; height:7px; border-radius:50%; margin-right:6px; vertical-align:1px; }
+.legend .s:before { background:var(--accent); } .legend .a:before { background:var(--fault); }
+.explain { padding:0 16px 16px; display:grid; grid-template-columns:1fr 1fr; gap:18px; }
+.explain h3 { font-size:15px; font-weight:600; letter-spacing:-.01em; margin-bottom:6px; }
+.explain p { font-size:13px; line-height:1.55; color:var(--muted); }
+.explain .parts { display:flex; flex-wrap:wrap; gap:6px; margin-top:8px; }
+.explain .parts span { font:500 11px var(--mono); color:#e9c0b3; border:1px solid rgba(217,121,95,.45); border-radius:999px; padding:3px 9px; }
+.side { display:grid; gap:14px; }
+.verdict { padding:16px; }
+.verdict .big { font-size:26px; font-weight:600; letter-spacing:-.03em; margin:12px 0 4px; }
+.verdict .big.fault { color:#eab3a3; } .verdict .big.ok { color:#d3e2bd; }
+.verdict .meta { display:flex; gap:18px; font:500 11px var(--mono); color:var(--muted); letter-spacing:.04em; margin-bottom:12px; }
+.verdict .meta b { color:var(--text); font-weight:500; }
+.verdict ul { list-style:none; display:grid; gap:7px; }
+.verdict li { font-size:12.5px; line-height:1.5; color:var(--muted); padding-left:14px; position:relative; }
+.verdict li:before { content:""; position:absolute; left:0; top:8px; width:5px; height:1px; background:var(--dim); }
+.sens { padding:6px 0; }
+.sens .lbl { padding:10px 16px 8px; display:block; }
+.row { display:grid; grid-template-columns:10px minmax(0,1fr) auto; gap:4px 10px; align-items:center; padding:8px 16px; border-top:1px solid var(--line); }
+.row .dot { width:7px; height:7px; border-radius:50%; background:var(--accent); }
+.row.hot .dot { background:var(--fault); }
+.row .n { font-size:13px; font-weight:500; } .row .n small { display:block; font:400 10.5px var(--mono); color:var(--dim); letter-spacing:.03em; margin-top:2px; }
+.row .v { text-align:right; font:500 12.5px var(--mono); letter-spacing:-.01em; } .row .v small { display:block; font-size:10.5px; color:var(--dim); font-weight:400; }
+.row.hot .v { color:#f0c8bb; }
+.row .ev { grid-column:2 / 4; height:3px; background:#1b1e22; border-radius:3px; overflow:hidden; }
+.row .ev i { display:block; height:100%; width:0; background:var(--accent); border-radius:3px; transition:width .5s ease, background .3s; }
+.row.hot .ev i { background:var(--fault); }
+.signals { margin-top:14px; padding:14px 16px 16px; }
+.signals .two { display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-top:10px; }
+.sig small { display:flex; justify-content:space-between; gap:10px; white-space:nowrap; overflow:hidden; font:500 11px var(--mono); color:var(--muted); margin-bottom:6px; letter-spacing:.03em; }
+.sig canvas { width:100%; height:110px; display:block; background:#0d0f11; border:1px solid var(--line); border-radius:10px; }
+.flow { margin-top:0; padding:14px 16px 12px; }
+.flow .head { display:flex; justify-content:space-between; align-items:baseline; flex-wrap:wrap; gap:8px; }
+.flow .note { font-size:12px; color:var(--dim); max-width:620px; line-height:1.5; }
+#flowsvg { width:100%; height:auto; display:block; margin-top:8px; }
+.foot { margin-top:12px; font:400 11px var(--mono); color:var(--dim); letter-spacing:.03em; line-height:1.6; }
+@media (max-width:1000px) { .grid { grid-template-columns:1fr; } #stage { height:440px; } .explain, .signals .two { grid-template-columns:1fr; } }
+</style>
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}</script>
+</head>
+<body>
+<div class="bar" style="margin-bottom:8px"><div class="chips"><button class="vt on" data-v="a">Engine view</button><button class="vt" data-v="b">Signal path</button></div></div>
+<div class="bar">
+  <div class="chips" id="chips"></div>
+  <div class="chips">
+    <button class="pill on" data-t="xray">X-ray</button>
+    <button class="pill on" data-t="focus">Focus fault</button>
+    <button class="pill" data-t="explode">Take apart</button>
+    <button class="pill" data-t="rotate">Auto-rotate</button>
+  </div>
+</div>
+<div id="va"><div class="grid">
+  <div>
+    <div class="card stagecard">
+      <div class="stagehead"><span class="lbl">Engine &middot; sensor placement</span><span class="lbl" id="op"></span></div>
+      <div id="stage"><div id="tags"></div><div class="hover" id="hover">Drag to rotate &middot; hover a part</div>
+        <div class="legend"><span class="s">Sensor</span><span class="a">Reads a change</span></div></div>
+      <div class="explain" id="explain"></div>
+    </div>
+    <div class="card signals">
+      <span class="lbl">Live signals &middot; faint line is the healthy engine</span>
+      <div class="two">
+        <div class="sig"><small><span>Microphone &middot; sound</span><span id="sndv"></span></small><canvas id="cs"></canvas></div>
+        <div class="sig"><small><span>Accelerometer &middot; block vibration</span><span id="vibv"></span></small><canvas id="cv"></canvas></div>
+      </div>
+    </div>
+  </div>
+  <div class="side">
+    <div class="card verdict" id="verdict"></div>
+    <div class="card sens"><span class="lbl">Sensor readings &middot; healthy &rarr; now</span><div id="sens"></div></div>
+  </div>
+</div></div>
+<div id="vb" style="display:none"><div class="card flow">
+  <div class="head"><span class="lbl">Signal path &middot; sensors, features, diagnosis</span>
+    <span class="note">Brightness shows how far each feature moved from a healthy window, measured in units of how much a healthy engine normally varies. Lines join each feature to the fault it is a signature for.</span></div>
+  <svg id="flowsvg" viewBox="0 0 1180 560" role="img" aria-label="Flow from sensors to features to diagnosis"></svg>
+</div></div>
+<p class="foot" id="foot"></p>
+<script type="application/json" id="data">__DATA__</script>
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+/*__ENGINE3D__*/
+
+const D = JSON.parse(document.getElementById('data').textContent);
+const H = D.healthy;
+const NAMES = { healthy:'Healthy', misfire:'Misfire', knock:'Knock', valve_wear:'Valve wear', 'misfire+knock':'Misfire + knock', 'misfire+valve_wear':'Misfire + valve wear', 'knock+valve_wear':'Knock + valve wear' };
+const PARTS = { misfire:['coil2','inj2','piston2','rod2','crank'], knock:['piston1','piston2','piston3','piston4','head','knock'], valve_wear:['valve1','cams'] };
+const PART_NAMES = { coil2:'Ignition coil 2', inj2:'Injector 2', piston2:'Piston 2', rod2:'Connecting rod 2', crank:'Crankshaft', piston1:'Pistons', head:'Cylinder head', knock:'Knock sensor', valve1:'Valves, cylinder 1', cams:'Camshafts' };
+const INFO = {
+  healthy:{ t:'All four cylinders firing evenly', p:'Every cylinder contributes the same firing energy, so the sound has no extra lines, the block vibrates smoothly and the ECU readings sit at their normal values.' },
+  misfire:{ t:'Cylinder 2 fires weakly', p:'The crank slows a little on that cylinder, one cylinder carries less firing energy, and an extra line appears at half the firing order. Unburnt air reads lean, so the ECU adds fuel.' },
+  knock:{ t:'Detonation after firing', p:'Short bursts ring the block near 6.5 kHz just after firing. Both the microphone and the accelerometer hear them, and the ECU pulls spark timing back to protect the engine.' },
+  valve_wear:{ t:'Worn valve on cylinder 1', p:'A loose valve ticks near 3 kHz once every two crank revolutions. Only the block accelerometer picks it up clearly; the ECU readings do not change.' },
+};
+// Sensors, in the order data flows through the engine. `feats` are the model inputs each one supplies.
+const SENSORS = [
+  { id:'mic', side:'l', name:'Engine sound', tag:'SOUND', sub:'simulated microphone, 16 kHz', anchor:'mic', feats:['sound_half_order_ratio','sound_knock_vs_floor'], val:(d)=>['x'+(d.rms.sound/H.rms.sound).toFixed(2),'level'] },
+  { id:'accel', name:'Block vibration', tag:'VIBRATION', sub:'simulated accelerometer, 16 kHz', anchor:'accel', feats:['vibration_cyl_cv','vibration_cyl_min_ratio','vibration_knock_vs_floor','vibration_valve_vs_floor','vibration_valve_env_cycle'], val:(d)=>['x'+(d.rms.vibration/H.rms.vibration).toFixed(2),'level'] },
+  { id:'ckp', side:'l', name:'Engine speed', tag:'ENGINE RPM', sub:'OBD-II PID 0C, Ocslab Kia Soul', anchor:'ckp', feats:['obd_engine_speed'], val:(d)=>[Math.round(d.features.obd_engine_speed)+' rpm', Math.round(H.mean.obd_engine_speed)+' rpm'] },
+  { id:'o2', side:'l', name:'Fuel trim, bank 1', tag:'FUEL TRIM B1', sub:'OBD-II PID 06 + 07, short + long term', anchor:'o2', feats:['obd_total_fuel_trim'], val:(d)=>[sgn(d.features.obd_total_fuel_trim)+' %', sgn(H.mean.obd_total_fuel_trim)+' %'] },
+  { id:'timing', name:'Timing advance', tag:'TIMING ADV.', sub:'OBD-II PID 0E', anchor:'timing', feats:['obd_timing_advance'], val:(d)=>[d.features.obd_timing_advance.toFixed(1)+' deg', H.mean.obd_timing_advance.toFixed(1)+' deg'] },
+  { id:'maf', name:'Mass air flow', tag:'MAF', sub:'OBD-II PID 10', anchor:'maf', feats:['obd_maf'], val:(d)=>[d.features.obd_maf.toFixed(2)+' g/s', H.mean.obd_maf.toFixed(2)+' g/s'] },
+  { id:'throttle', name:'Calculated load', tag:'CALC. LOAD', sub:'OBD-II PID 04', anchor:'throttle', feats:['obd_calculated_load_value'], val:(d)=>[d.features.obd_calculated_load_value.toFixed(1)+' %', H.mean.obd_calculated_load_value.toFixed(1)+' %'] },
+  { id:'ect', side:'l', name:'Coolant temperature', tag:'COOLANT', sub:'OBD-II PID 05', anchor:'ect', feats:['obd_engine_coolant_temperature'], val:(d)=>[d.features.obd_engine_coolant_temperature.toFixed(1)+' C', H.mean.obd_engine_coolant_temperature.toFixed(1)+' C'] },
+];
+const FEATURES = [
+  ['sound_half_order_ratio','Half-order line, 0.5x','mic','misfire'], ['sound_knock_vs_floor','Knock band, 6-7 kHz','mic','knock'],
+  ['vibration_cyl_cv','Cylinder energy spread','accel','misfire'], ['vibration_cyl_min_ratio','Weakest-cylinder ratio','accel','misfire'],
+  ['vibration_knock_vs_floor','Knock band, 6-7 kHz','accel','knock'], ['vibration_valve_vs_floor','Valve-tick band, 3 kHz','accel','valve_wear'],
+  ['vibration_valve_env_cycle','Tick once per cycle','accel','valve_wear'], ['obd_engine_speed','Engine speed (RPM)','ckp','misfire'],
+  ['obd_total_fuel_trim','Total fuel trim','o2','misfire'], ['obd_timing_advance','Spark advance','timing','knock'],
+  ['obd_maf','Air mass flow','maf',null], ['obd_calculated_load_value','Calculated load','throttle',null], ['obd_engine_coolant_temperature','Coolant temperature','ect',null],
+];
+function sgn(v) { return (v >= 0 ? '+' : '') + v.toFixed(1); }
+const $ = (s) => document.querySelector(s);
+const state = { fault: D.meta.initial in D.faults ? D.meta.initial : 'misfire', xray:true, focus:true, explode:false, rotate:false };
+
+/* ------------------------------------------------------------------ chips and toggles */
+const chips = $('#chips');
+D.meta.faults.forEach((f) => { const b = document.createElement('button'); b.className = 'chip'; b.textContent = NAMES[f]; b.dataset.f = f; b.onclick = () => setFault(f); chips.appendChild(b); });
+document.querySelectorAll('.pill').forEach((b) => b.addEventListener('click', () => {
+  const k = b.dataset.t; state[k] = !state[k]; b.classList.toggle('on', state[k]);
+  if (k === 'explode') b.textContent = state.explode ? 'Put back together' : 'Take apart';
+  applyToggles();
+}));
+
+document.querySelectorAll('.vt').forEach((b) => b.addEventListener('click', () => {
+  document.querySelectorAll('.vt').forEach((x) => x.classList.toggle('on', x === b));
+  $('#va').style.display = b.dataset.v === 'a' ? '' : 'none'; $('#vb').style.display = b.dataset.v === 'b' ? '' : 'none';
+  if (stage) stage.resize();
+}));
+/* ------------------------------------------------------------------ 3D scene */
+let eng, stage, tagEls = {};
+const host = $('#stage');
+try {
+  stage = createStage(THREE, OrbitControls, RoomEnvironment, host, { camera:[8.6, 3.9, 9.6], target:[0, 0.5, 0], autoRotate:false, fov:30 });
+  stage.controls.minDistance = 7; stage.controls.maxDistance = 22;
+  eng = buildEngine(THREE);
+  stage.scene.add(eng.root);
+  eng.setSpeed(Math.max(0.15, D.meta.rpm / 60 * 0.012));
+  stage.setScale = (k) => { eng.root.scale.setScalar(k); eng.root.position.set(-0.3 * k, -1.2 * k, 0); };
+} catch (e) { console.error(e); host.insertAdjacentHTML('beforeend', '<div class="hover">3D view needs WebGL.</div>'); }
+SENSORS.forEach((s) => { const el = document.createElement('div'); el.className = 'tag' + (s.side === 'l' ? ' l' : ''); el.innerHTML = '<i></i><b>' + s.tag + '</b><span></span>'; $('#tags').appendChild(el); tagEls[s.id] = el; });
+function applyToggles() {
+  if (!eng) return;
+  eng.setXray(state.xray); eng.setFocus(state.focus); eng.setExplode(state.explode ? 1 : 0);
+  stage.controls.autoRotate = state.rotate; stage.controls.autoRotateSpeed = 1.1;
+}
+const ray = new THREE.Raycaster(), mouse = new THREE.Vector2();
+host.addEventListener('pointermove', (e) => {
+  if (!eng) return; const r = host.getBoundingClientRect();
+  mouse.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
+  ray.setFromCamera(mouse, stage.camera);
+  const hit = ray.intersectObjects(eng.root.children, true).find((h) => h.object.material && h.object.material.opacity > 0.4);
+  let o = hit && hit.object; while (o && !eng.parts[o.name]) o = o.parent;
+  $('#hover').innerHTML = o ? '<b>' + eng.parts[o.name].label + '</b>' : 'Drag to rotate &middot; hover a part';
+});
+
+/* ------------------------------------------------------------------ fault selection */
+function faultParts(f) { const set = []; f.split('+').forEach((k) => { if (PARTS[k]) set.push(...PARTS[k]); }); return set; }
+function setFault(f) {
+  state.fault = f;
+  document.querySelectorAll('.chip').forEach((c) => { c.classList.toggle('on', c.dataset.f === f); c.classList.toggle('fault', c.dataset.f === f && f !== 'healthy'); });
+  const d = D.faults[f], ids = f.split('+');
+  if (eng) { eng.setFault(f, D.meta.severity); eng.setHot(faultParts(f)); applyToggles(); }
+  // explanation
+  const exp = $('#explain');
+  const blocks = (f === 'healthy' ? ['healthy'] : ids).map((k) => '<div><h3>' + INFO[k].t + '</h3><p>' + INFO[k].p + '</p></div>').join('');
+  const aff = faultParts(f).filter((v, i, a) => a.indexOf(v) === i).map((p) => PART_NAMES[p] || p);
+  exp.innerHTML = blocks + (aff.length ? '<div style="grid-column:1/-1"><span class="lbl">Parts this fault acts on</span><div class="parts">' + aff.map((a) => '<span>' + a + '</span>').join('') + '</div></div>' : '');
+  exp.style.gridTemplateColumns = (f === 'healthy' || ids.length === 1) ? '1fr' : '1fr 1fr';
+  // verdict
+  const bad = d.status !== 'Healthy';
+  $('#verdict').innerHTML = '<span class="lbl">Diagnosis</span><div class="big ' + (bad ? 'fault' : 'ok') + '">' + (bad ? 'Fault: ' + d.label.replace(/\+/g, ' and ').replace(/_/g, ' ') : 'Healthy') + '</div>' +
+    '<div class="meta"><span>CONFIDENCE <b>' + Math.round(d.confidence * 100) + '%</b></span>' + (bad ? '<span>SEVERITY <b>' + Math.round(D.meta.severity * 100) + '%</b></span>' : '') + '</div><ul>' + d.reasons.map((r) => '<li>' + r + '</li>').join('') + '</ul>';
+  // sensor rows
+  $('#sens').innerHTML = SENSORS.map((s) => {
+    const ev = Math.max(...s.feats.map((k) => d.evidence[k] || 0)), v = s.val(d), hot = ev >= 0.35;
+    return '<div class="row' + (hot ? ' hot' : '') + '"><span class="dot"></span><div class="n">' + s.name + '<small>' + s.sub + '</small></div><div class="v">' + v[0] + '<small>' + (hot ? 'was ' : 'normal ') + v[1] + '</small></div><div class="ev"><i style="width:' + Math.round(Math.max(ev, 0.03) * 100) + '%"></i></div></div>';
+  }).join('');
+  $('#sndv').textContent = 'x' + (d.rms.sound / H.rms.sound).toFixed(2) + ' level';
+  $('#vibv').textContent = 'x' + (d.rms.vibration / H.rms.vibration).toFixed(2) + ' level';
+  drawFlow();
+}
+
+/* ------------------------------------------------------------------ signal path diagram */
+const SVGNS = 'http://www.w3.org/2000/svg';
+function el(tag, attrs, text) { const e = document.createElementNS(SVGNS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); if (text != null) e.textContent = text; return e; }
+function drawFlow() {
+  const svg = $('#flowsvg'); svg.innerHTML = '';
+  const d = D.faults[state.fault], FH = 560, top = 40;
+  const col = { s:[0, 220], f:[330, 580], m:[690, 840], o:[960, 1180] };
+  const rowY = (i, n) => top + (i + 0.5) * ((FH - top - 10) / n);
+  [['SENSORS', col.s[0]], ['FEATURES', col.f[0]], ['DIAGNOSIS', col.m[0]], ['OUTPUT', col.o[0]]].forEach(([t, x]) => svg.appendChild(el('text', { x, y:16, fill:'#5d636a', 'font-family':'Helvetica Neue, Helvetica, Arial, sans-serif', 'font-size':11, 'letter-spacing':'1.2' }, t)));
+  const sY = {}, fY = {};
+  SENSORS.forEach((s, i) => { sY[s.id] = rowY(i, SENSORS.length); });
+  FEATURES.forEach((f, i) => { fY[f[0]] = rowY(i, FEATURES.length); });
+  const outs = [['healthy', 'Healthy'], ['misfire', 'Misfire'], ['knock', 'Knock'], ['valve_wear', 'Valve wear']];
+  const oY = {}; outs.forEach((o, i) => { oY[o[0]] = rowY(i, 4) + 30 * (i - 1.5) * 0.4; });
+  const mY = (FH + top) / 2 - 5;
+  const link = (x1, y1, x2, y2, c, w, o) => { const m = (x1 + x2) / 2; svg.appendChild(el('path', { d:`M${x1} ${y1} C${m} ${y1} ${m} ${y2} ${x2} ${y2}`, fill:'none', stroke:c, 'stroke-width':w, 'stroke-opacity':o, 'stroke-linecap':'round' })); };
+  const sensEv = {}; SENSORS.forEach((s) => { sensEv[s.id] = Math.max(...s.feats.map((k) => d.evidence[k] || 0)); });
+  // sensor -> feature
+  FEATURES.forEach((f) => { const ev = d.evidence[f[0]] || 0; link(col.s[1], sY[f[2]], col.f[0], fY[f[0]], ev >= 0.35 ? '#d9795f' : '#a9c4d4', 1 + ev * 2.4, ev >= 0.35 ? 0.85 : 0.14); });
+  // feature -> diagnosis node
+  FEATURES.forEach((f) => { const ev = d.evidence[f[0]] || 0; link(col.f[1], fY[f[0]], col.m[0], mY, ev >= 0.35 ? '#d9795f' : '#a9c4d4', 1 + ev * 2.4, ev >= 0.35 ? 0.7 : 0.1); });
+  // diagnosis -> outputs
+  const pr = (k) => k === 'healthy' ? (d.status === 'Healthy' ? d.confidence : 1 - Math.max(...Object.values(d.probs))) : (d.probs[k] || 0);
+  outs.forEach((o) => { const p = pr(o[0]); link(col.m[1], mY, col.o[0], oY[o[0]], o[0] === 'healthy' ? '#b9cf9a' : '#d9795f', 1 + p * 8, 0.15 + 0.7 * p); });
+  // feature -> fault signature (faint dashed hint of what each feature is for)
+  FEATURES.forEach((f) => { if (!f[3]) return; const ev = d.evidence[f[0]] || 0; if (ev < 0.35) return;
+    svg.appendChild(el('path', { d:`M${col.f[1]} ${fY[f[0]]} L${col.f[1] + 22} ${fY[f[0]]}`, stroke:'#d9795f', 'stroke-width':1.5 })); });
+  // nodes
+  SENSORS.forEach((s) => { const hot = sensEv[s.id] >= 0.35, y = sY[s.id];
+    svg.appendChild(el('rect', { x:col.s[0], y:y - 15, width:col.s[1] - col.s[0], height:30, rx:9, fill:'#111316', stroke:hot ? '#d9795f' : '#2f3338' }));
+    svg.appendChild(el('circle', { cx:col.s[0] + 14, cy:y, r:3.5, fill:hot ? '#d9795f' : '#a9c4d4' }));
+    svg.appendChild(el('text', { x:col.s[0] + 28, y:y + 4, fill:'#e6e8ea', 'font-family':'Helvetica Neue, Helvetica, Arial, sans-serif', 'font-size':12.5, 'font-weight':500 }, s.name)); });
+  FEATURES.forEach((f) => { const ev = d.evidence[f[0]] || 0, hot = ev >= 0.35, y = fY[f[0]];
+    svg.appendChild(el('rect', { x:col.f[0], y:y - 11, width:col.f[1] - col.f[0], height:22, rx:7, fill:'#111316', stroke:hot ? '#d9795f' : '#23262b' }));
+    svg.appendChild(el('rect', { x:col.f[0] + 1, y:y - 10, width:Math.max(2, (col.f[1] - col.f[0] - 2) * ev), height:20, rx:6, fill:hot ? '#d9795f' : '#a9c4d4', 'fill-opacity':hot ? 0.22 : 0.12 }));
+    svg.appendChild(el('text', { x:col.f[0] + 11, y:y + 4, fill:hot ? '#f0d0c6' : '#9aa0a6', 'font-family':'Helvetica Neue, Helvetica, Arial, sans-serif', 'font-size':11.5 }, f[1]));
+    svg.appendChild(el('text', { x:col.f[1] - 9, y:y + 4, fill:'#5d636a', 'text-anchor':'end', 'font-family':'Helvetica Neue, Helvetica, Arial, sans-serif', 'font-size':10 }, (f[0].startsWith('obd') ? 'ECU' : f[0].startsWith('sound') ? 'SND' : 'VIB'))); });
+  svg.appendChild(el('rect', { x:col.m[0], y:mY - 62, width:col.m[1] - col.m[0], height:124, rx:12, fill:'#15181b', stroke:'#2f3338' }));
+  ['Softmax baseline', 'SVM', 'Spectrogram CNN', 'Autoencoder'].forEach((t, i) => svg.appendChild(el('text', { x:col.m[0] + 16, y:mY - 34 + i * 24, fill:i === 0 ? '#e6e8ea' : '#8b9197', 'font-family':'Helvetica Neue, Helvetica, Arial, sans-serif', 'font-size':12.5 }, t)));
+  outs.forEach((o) => { const p = pr(o[0]), y = oY[o[0]], on = (o[0] === 'healthy' ? d.status === 'Healthy' : state.fault.split('+').includes(o[0])), c = o[0] === 'healthy' ? '#b9cf9a' : '#d9795f';
+    svg.appendChild(el('rect', { x:col.o[0], y:y - 24, width:col.o[1] - col.o[0], height:48, rx:11, fill:'#111316', stroke:on ? c : '#2f3338' }));
+    svg.appendChild(el('text', { x:col.o[0] + 16, y:y - 4, fill:'#e6e8ea', 'font-family':'Helvetica Neue, Helvetica, Arial, sans-serif', 'font-size':14, 'font-weight':600 }, o[1]));
+    svg.appendChild(el('text', { x:col.o[1] - 14, y:y - 4, 'text-anchor':'end', fill:on ? c : '#8b9197', 'font-family':'Helvetica Neue, Helvetica, Arial, sans-serif', 'font-size':13 }, Math.round(p * 100) + '%'));
+    svg.appendChild(el('rect', { x:col.o[0] + 16, y:y + 9, width:col.o[1] - col.o[0] - 32, height:4, rx:2, fill:'#1b1e22' }));
+    svg.appendChild(el('rect', { x:col.o[0] + 16, y:y + 9, width:Math.max(2, (col.o[1] - col.o[0] - 32) * p), height:4, rx:2, fill:c })); });
+}
+
+/* ------------------------------------------------------------------ live signal traces */
+const cs = $('#cs'), cv = $('#cv');
+function drawWave(canvas, key, t) {
+  const dpr = Math.min(devicePixelRatio || 1, 2), w = canvas.clientWidth, h = canvas.clientHeight;
+  if (canvas.width !== w * dpr) { canvas.width = w * dpr; canvas.height = h * dpr; }
+  const g = canvas.getContext('2d'); g.setTransform(dpr, 0, 0, dpr, 0, 0); g.clearRect(0, 0, w, h);
+  g.strokeStyle = 'rgba(169,196,212,.07)'; g.lineWidth = 1; g.beginPath(); g.moveTo(0, h / 2); g.lineTo(w, h / 2); g.stroke();
+  const base = D.faults.healthy.wave[key], cur = D.faults[state.fault].wave[key], N = 240, total = base.length;
+  const off = Math.floor((t * 55) % (total - N)), col = state.fault === 'healthy' ? '#a9c4d4' : '#d9795f', bw = w / N;
+  const draw = (arr, color, alpha, lw) => { g.strokeStyle = color; g.globalAlpha = alpha; g.lineWidth = lw; g.beginPath();
+    for (let i = 0; i < N; i++) { const [lo, hi] = arr[off + i], x = i * bw + bw / 2; g.moveTo(x, h / 2 - hi * h * 0.46); g.lineTo(x, h / 2 - lo * h * 0.46 - 0.5); } g.stroke(); g.globalAlpha = 1; };
+  draw(base, '#a9c4d4', 0.28, Math.max(1, bw * 0.8));
+  if (state.fault !== 'healthy') draw(cur, col, 0.95, Math.max(1, bw * 0.8)); else draw(cur, col, 0.9, Math.max(1, bw * 0.8));
+}
+
+/* ------------------------------------------------------------------ frame loop */
+$('#op').textContent = Math.round(D.meta.rpm) + ' rpm  /  ' + Math.round(D.meta.load * 100) + '% load  /  ' + Math.round(D.meta.snr) + ' dB';
+$('#foot').textContent = 'Sound and vibration are simulated from assumed fault signatures; OBD values are calibrated to real Kia Soul data. ' + (D.meta.demo ? 'The diagnosis shown here comes from the demo diagnoser, not trained models.' : 'Diagnosis comes from the trained models in cache/.') + ' The 3D engine is a schematic, not a scan of a specific engine.';
+setFault(state.fault);
+const v = new THREE.Vector3(); let last = performance.now();
+function frame(now) {
+  const dt = Math.min(0.05, (now - last) / 1000); last = now;
+  if (eng) {
+    stage.setScale(1.08 - 0.22 * eng.state.explode);
+    eng.update(dt); stage.controls.update(); stage.renderer.render(stage.scene, stage.camera);
+    const w = host.clientWidth, h = host.clientHeight, d = D.faults[state.fault];
+    const placed = [];
+    SENSORS.forEach((s) => {
+      const a = eng.anchors[s.anchor]; if (!a) return; a.getWorldPosition(v); v.project(stage.camera);
+      const e = tagEls[s.id], ev = Math.max(...s.feats.map((k) => d.evidence[k] || 0));
+      e.style.display = v.z < 1 ? 'flex' : 'none'; e.classList.toggle('hot', ev >= 0.35);
+      e.lastChild.textContent = s.val(d)[0];
+      placed.push({ s, e, x:(v.x * 0.5 + 0.5) * w, y:Math.max(16, Math.min(h - 16, (-v.y * 0.5 + 0.5) * h)), left:s.side === 'l' });
+    });
+    // spread tags on each side so none sit on top of another
+    [true, false].forEach((side) => {
+      const col = placed.filter((p) => p.left === side).sort((p, q) => p.y - q.y);
+      for (let i = 1; i < col.length; i++) if (col[i].y - col[i - 1].y < 30) col[i].y = col[i - 1].y + 30;
+      const over = col.length ? col[col.length - 1].y - (h - 16) : 0;
+      if (over > 0) col.forEach((p) => { p.y -= over; });
+    });
+    placed.forEach((p) => {
+      const bw = p.e.offsetWidth || 120;
+      p.e.style.left = Math.max(p.left ? bw + 14 : 4, Math.min(p.left ? w - 4 : w - bw - 14, p.x)) + 'px'; p.e.style.top = p.y + 'px';
+    });
+  }
+  drawWave(cs, 'sound', now / 1000); drawWave(cv, 'vibration', now / 1000);
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>

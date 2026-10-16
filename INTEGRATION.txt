@@ -1,0 +1,10 @@
+The supplied HackHive live replay is embedded in the existing frontend's Live engine tab. The previous simulator view is preserved under Synthetic engine. All other analysis tabs and the showroom remain available.
+
+Install: python -m pip install -e .
+Run: python -m streamlit run app.py
+
+Replay uses the bundled LiU-ICE data and models. Synthetic analysis sections retain their original demo behavior. Sidebar simulation controls apply to those sections; the live replay has its own controls.
+
+No detection, threshold, feature, simulation or graph calculations were changed. Only embedding and scoped presentation styles were added. Graph row alignment and replay controls were tested.
+
+Model compatibility: supplied artifacts were saved using scikit-learn 1.5.1. The current machine runs 1.9.1, which emits model version warnings. Passing integration checks is not validation of prediction accuracy. For model reproducibility, use the original training environment.

@@ -13,21 +13,22 @@ def test_all_sections_render_and_results_use_available_artifacts():
     app.button(key="enter_engine_twin").click().run()
     assert not app.exception
     navigation = app.radio(key="workspace_section")
-    assert navigation.options == ["Live engine", "Sensor fusion", "Engine insights", "Real data lab", "Validation"]
+    assert len(navigation.options) == 11
+    assert "Engine map" in navigation.options
+    assert "Sweet spot" in navigation.options
     app.toggle(key="guard_enabled").set_value(False).run()
-    app.selectbox(key="sidebar_live_fault").set_value("wltp_f_waf_115").run()
-    app.button(key="sidebar_inject").click().run()
-    assert app.session_state["triggered_failure"] is True
+    app.slider(key="manual_bias_engine_speed").set_value(10).run()
     for section in navigation.options:
         app.radio(key="workspace_section").set_value(section).run()
         assert not app.exception, (section, [error.message for error in app.exception])
-        if section == "Validation":
+        if section == "Results":
             assert len(app.dataframe) >= 3
             assert app.metric[0].value == "3"
             assert not any("unavailable in demo mode" in info.value for info in app.info)
     app.radio(key="workspace_section").set_value("Live engine").run()
     assert not app.exception
     assert app.toggle(key="guard_enabled").value is False
+    assert app.slider(key="manual_bias_engine_speed").value == 10
 
 
 def test_live_chart_has_fixed_scale_and_rolling_time_window():

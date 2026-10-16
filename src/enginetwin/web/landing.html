@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+:root { --bg:#0a0b0d; --line:#23262b; --text:#e6e8ea; --muted:#8b9197; --dim:#5d636a; --accent:#a9c4d4; --ok:#b9cf9a;
+  --sans:'Helvetica Neue',Helvetica,Arial,sans-serif; --mono:'Helvetica Neue',Helvetica,Arial,sans-serif; }
+* { box-sizing:border-box; margin:0; padding:0; }
+html, body { height:100%; background:var(--bg); color:var(--text); font-family:var(--sans); overflow:hidden; }
+body { position:relative; }
+.grid { position:absolute; inset:0; pointer-events:none;
+  background-image:
+    linear-gradient(rgba(169,196,212,.06) 1px, transparent 1px), linear-gradient(90deg, rgba(169,196,212,.06) 1px, transparent 1px),
+    linear-gradient(rgba(169,196,212,.025) 1px, transparent 1px), linear-gradient(90deg, rgba(169,196,212,.025) 1px, transparent 1px);
+  background-size:120px 120px,120px 120px,24px 24px,24px 24px;
+  -webkit-mask-image:radial-gradient(ellipse 80% 75% at 58% 52%, #000 20%, transparent 90%); mask-image:radial-gradient(ellipse 80% 75% at 58% 52%, #000 20%, transparent 90%); }
+.word { position:absolute; left:50%; top:47%; width:72vw; transform:translate(-50%,-50%); z-index:1; pointer-events:none; user-select:none; transition:transform .25s ease-out; }
+.word svg { display:block; width:100%; height:auto; overflow:visible; }
+.word text { font-family:'Helvetica Neue',Helvetica,Arial,sans-serif; font-weight:900; font-size:440px; }
+#stage { position:absolute; left:14%; right:3%; top:76px; bottom:96px; z-index:2; cursor:grab; }
+#stage:active { cursor:grabbing; }
+.floor { position:absolute; left:50%; bottom:92px; width:min(62vw,820px); height:150px; transform:translateX(-46%); z-index:1; pointer-events:none;
+  border:1px solid rgba(169,196,212,.12); border-radius:50%; background:radial-gradient(ellipse at center, rgba(169,196,212,.07), transparent 68%); }
+.floor:after { content:""; position:absolute; inset:22px 90px; border:1px dashed rgba(169,196,212,.09); border-radius:50%; }
+header { position:absolute; top:0; left:0; right:0; height:76px; z-index:5; display:flex; align-items:center; justify-content:space-between; padding:0 4vw; border-bottom:1px solid var(--line); background:linear-gradient(#0a0b0d, rgba(10,11,13,.5)); backdrop-filter:blur(6px); }
+.brand { display:flex; align-items:center; gap:12px; }
+.brand b { display:block; font-size:17px; font-weight:600; letter-spacing:-.02em; }
+.brand small { display:block; margin-top:4px; font:500 9.5px var(--mono); letter-spacing:.16em; text-transform:uppercase; color:var(--dim); }
+.status { display:flex; align-items:center; gap:9px; font:500 11px var(--mono); letter-spacing:.08em; color:var(--muted); border:1px solid var(--line); padding:8px 13px; border-radius:999px; }
+.status i { width:6px; height:6px; border-radius:50%; background:var(--ok); }
+.intro { position:absolute; z-index:5; left:4vw; top:132px; width:min(330px,30vw); }
+.kicker { font:500 11px var(--mono); letter-spacing:.14em; text-transform:uppercase; color:var(--accent); }
+.kicker:before { content:"[ "; color:var(--dim); } .kicker:after { content:" ]"; color:var(--dim); }
+h1 { margin-top:16px; font-size:clamp(28px,3.1vw,46px); line-height:1.04; font-weight:600; letter-spacing:-.035em; }
+.intro p { margin-top:18px; font-size:14px; line-height:1.65; color:var(--muted); max-width:300px; }
+.specs { position:absolute; z-index:5; left:4vw; right:calc(4vw + 230px); bottom:30px; display:grid; grid-template-columns:repeat(4,1fr); gap:2vw; }
+.spec { border-top:1px solid var(--line); padding-top:12px; }
+.spec small { display:block; font:500 10px var(--mono); letter-spacing:.1em; text-transform:uppercase; color:var(--dim); margin-bottom:7px; }
+.spec strong { font:500 14px var(--mono); letter-spacing:.02em; }
+.tools { position:absolute; z-index:5; right:4vw; top:104px; display:flex; gap:8px; align-items:center; }
+.pill { font:500 11px var(--mono); letter-spacing:.06em; color:var(--text); background:#111316; border:1px solid #2f3338; padding:9px 14px; border-radius:999px; cursor:pointer; transition:border-color .15s,color .15s; }
+.pill:hover { border-color:var(--accent); color:var(--accent); }
+.hint { font:400 11px var(--mono); color:var(--dim); letter-spacing:.06em; margin-right:6px; }
+@media (max-width:900px) {
+  .intro { width:auto; right:4vw; } .intro p { display:none; } #stage { left:0; right:0; top:200px; bottom:210px; } .specs { grid-template-columns:repeat(2,1fr); right:4vw; bottom:90px; row-gap:14px; } .hint { display:none; } .word { width:84vw; }
+}
+@media (prefers-reduced-motion:reduce) { .word { transition:none; } }
+</style>
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}</script>
+</head>
+<body>
+<div class="grid"></div>
+<div class="word" id="word"><svg viewBox="0 0 1000 330" role="presentation" aria-hidden="true"><defs><linearGradient id="wg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ee4a41"/><stop offset=".55" stop-color="#b9261f"/><stop offset="1" stop-color="#8a1c17"/></linearGradient></defs><text x="0" y="318" textLength="1000" lengthAdjust="spacingAndGlyphs" fill="url(#wg)">ENGINE</text></svg></div>
+<div class="floor"></div>
+<div id="stage" aria-label="Rotating 3D model of an inline-four engine"></div>
+<header>
+  <div class="brand"><span><b>Power Ranger</b></span></div>
+</header>
+<section class="intro">
+  <div class="kicker">ET-04 &middot; Inline four</div>
+  <h1>Power Ranger</h1>
+  <p>A synchronised view of combustion sound, vibration and ECU telemetry, translated into explainable fault evidence.</p>
+</section>
+<div class="tools"><span class="hint">DRAG TO ROTATE</span><button class="pill" id="explode" type="button">Take apart</button></div>
+<section class="specs" aria-label="Engine specifications">
+  <div class="spec"><small>Configuration</small><strong>INLINE-4</strong></div>
+  <div class="spec"><small>Sensor streams</small><strong>10 CHANNELS</strong></div>
+  <div class="spec"><small>Analysis</small><strong>FFT + STFT</strong></div>
+  <div class="spec"><small>Guard state</small><strong>READY</strong></div>
+</section>
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+/*__ENGINE3D__*/
+try {
+  const host = document.getElementById('stage');
+  const stage = createStage(THREE, OrbitControls, RoomEnvironment, host, { camera: [10.6, 4.6, 12.2], target: [0, 0.35, 0], rotateSpeed: 1.2, fov: 30 });
+  stage.controls.minDistance = 10; stage.controls.maxDistance = 24;
+  const eng = buildEngine(THREE);
+  stage.scene.add(eng.root);
+  eng.setSpeed(0.16);
+  let exploded = false, userTouched = false, last = performance.now(), phaseT = 0;
+  const btn = document.getElementById('explode');
+  function setExploded(v) { exploded = v; eng.setExplode(v ? 1 : 0); btn.textContent = v ? 'Put back together' : 'Take apart'; }
+  btn.addEventListener('click', () => { userTouched = true; setExploded(!exploded); });
+  // Until the visitor takes over, the engine assembles, comes apart and goes back together on its own.
+  function frame(now) {
+    const dt = Math.min(0.05, (now - last) / 1000); last = now;
+    if (!userTouched) { phaseT += dt; const cyc = phaseT % 13; const want = cyc > 6 && cyc < 10.5; if (want !== exploded) setExploded(want); }
+    const k = 1.32 - 0.38 * eng.state.explode; eng.root.scale.setScalar(k); eng.root.position.set(-0.3 * k, -1.2 * k, 0);
+    eng.update(dt); stage.controls.update(); stage.renderer.render(stage.scene, stage.camera);
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+  window.addEventListener('pointermove', (e) => {
+    const x = (e.clientX / innerWidth - 0.5), y = (e.clientY / innerHeight - 0.5);
+    document.getElementById('word').style.transform = `translate(calc(-50% + ${x * -26}px), calc(-50% + ${y * -14}px))`;
+  });
+} catch (err) { console.error(err); }
+</script>
+</body>
+</html>

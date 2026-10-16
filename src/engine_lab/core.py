@@ -156,7 +156,7 @@ def build_rul_features(
         excluded.add(failure_col)
     sensors = [c for c in df.select_dtypes(include=np.number).columns if c not in excluded]
     if not sensors:
-        raise ValueError("No numeric sensor channels found after excluding IDs, time and targets.")
+        raise ValueError("No numeric sensor channels found after excluding IDs, time, and targets.")
     if target_col:
         y = pd.to_numeric(df[target_col], errors="coerce")
         keep = y.notna()
