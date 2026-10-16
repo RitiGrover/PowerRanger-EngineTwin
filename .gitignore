@@ -212,7 +212,16 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+.streamlit/*.log
 
-# EngineTwin: downloaded datasets and regenerable outputs (never commit data)
-/data/
+# EngineTwin: regenerable training outputs
 /cache/
+
+# Local development state
+/.runtime/
+/.ui-backup/
+/.publish-worktree/
+/.codex/
+/.claude/
+/AGENTS.md
+/CLAUDE.md

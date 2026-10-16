@@ -1,7 +1,11 @@
 """Multimodal CNN: spectrogram images of sound and vibration plus OBD values, one sigmoid per fault (so two at once)."""
 import numpy as np
-import torch
-from torch import nn
+try:  # Torch is optional for the lightweight dashboard/demo path.
+    import torch
+    from torch import nn
+except ImportError:  # pragma: no cover - exercised by installations without the dl extra
+    torch = None
+    nn = None
 
 FAULT_NAMES = ("misfire", "knock", "valve_wear")
 
@@ -22,8 +26,10 @@ def labels_from_proba(proba, threshold=0.5) -> np.ndarray:
     return np.array(labels)
 
 
-class _Net(nn.Module):
+class _Net(nn.Module if nn is not None else object):
     def __init__(self, n_obd):
+        if nn is None:
+            raise ImportError("PyTorch is required to train or load the CNN; install enginetwin[dl].")
         super().__init__()
         self.conv = nn.Sequential(
             nn.Conv2d(2, 8, 3, padding=1), nn.BatchNorm2d(8), nn.ReLU(), nn.MaxPool2d(2),
@@ -63,6 +69,8 @@ class CnnModel:
 
 
 def fit_cnn(spec, obd, multihot, seed=0, epochs=12, batch=64) -> CnnModel:
+    if torch is None:
+        raise ImportError("PyTorch is required to train the CNN; install enginetwin[dl].")
     torch.manual_seed(seed)
     spec, obd = np.asarray(spec, dtype=np.float32), np.asarray(obd, dtype=float)
     model = CnnModel(_Net(obd.shape[1]), float(spec.mean()), float(spec.std()) + 1e-9, obd.mean(axis=0), obd.std(axis=0) + 1e-9)
