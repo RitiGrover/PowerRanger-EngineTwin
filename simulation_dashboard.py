@@ -101,6 +101,41 @@ MANUAL_SCENARIO = {
     "failure_delay_s": 65.0,
     "extra_drift": 0.50,
 }
+NAMED_FAULT_PRESETS = {
+    "misfire": {
+        "name": "Misfire",
+        "primary_sensor": "engine_speed",
+        "changes": {
+            "engine_speed": -0.16,
+            "injected_fuel_mass": 0.14,
+            "air_mass_flow": -0.10,
+            "intake_manifold_pressure": -0.08,
+        },
+        "message": "Uneven combustion reduces crank speed and airflow while fuel correction rises.",
+    },
+    "knock": {
+        "name": "Knock",
+        "primary_sensor": "intake_manifold_pressure",
+        "changes": {
+            "intake_manifold_pressure": 0.18,
+            "throttle_position": -0.12,
+            "engine_speed": -0.08,
+            "injected_fuel_mass": 0.10,
+        },
+        "message": "Abnormal combustion raises manifold inconsistency as the control response reduces load.",
+    },
+    "valve_wear": {
+        "name": "Valve wear",
+        "primary_sensor": "air_mass_flow",
+        "changes": {
+            "air_mass_flow": -0.18,
+            "intake_manifold_pressure": -0.12,
+            "engine_speed": -0.09,
+            "injected_fuel_mass": 0.08,
+        },
+        "message": "Reduced breathing lowers airflow and manifold pressure while fuel correction increases.",
+    },
+}
 
 PLOT_COLORS = ["#6aa5e0", "#b08be0", "#5ec2b7", "#e0a15f"]
 DETECTOR_LABELS = {
@@ -381,6 +416,49 @@ def _create_manual_event(
     }
 
 
+def _create_named_fault_event(
+    frame: pd.DataFrame,
+    consistency_model: dict,
+    start: int,
+    fault_name: str,
+    severity: float,
+) -> dict:
+    fault_parts = fault_name.split("+")
+    presets = [NAMED_FAULT_PRESETS[part] for part in fault_parts]
+    combined_changes: dict[str, float] = {}
+    for preset in presets:
+        for sensor, change in preset["changes"].items():
+            combined_changes[sensor] = combined_changes.get(sensor, 0.0) + float(change)
+    primary_sensor = max(combined_changes, key=lambda sensor: abs(combined_changes[sensor]))
+    fault_label = " + ".join(preset["name"] for preset in presets)
+    fault_message = " ".join(preset["message"] for preset in presets)
+    severity_scale = 0.55 + 0.75 * float(np.clip(severity, 0.0, 1.0))
+    for gain in (1.0, 1.35, 1.8, 2.4, 3.2, 4.2):
+        changes = {
+            sensor: float(np.clip(change * severity_scale * gain, -0.8, 2.0))
+            for sensor, change in combined_changes.items()
+        }
+        preview_ok, code, _ = _preview_manual_fault(
+            frame, consistency_model, start, changes, primary_sensor
+        )
+        if preview_ok and code is not None:
+            event = _create_manual_event(
+                frame,
+                start,
+                primary_sensor,
+                changes,
+                code,
+                list(changes),
+            )
+            event.update(
+                fault_name=fault_name,
+                fault_label=fault_label,
+                fault_message=fault_message,
+            )
+            return event
+    raise ValueError(f"Could not create a confirmable {fault_label} event at this replay position.")
+
+
 def _apply_triggered_event(
     frame: pd.DataFrame,
     evidence: pd.DataFrame,
@@ -605,6 +683,26 @@ def render(*, embedded: bool = False) -> None:
     frame, _, base_evidence, base_scores, _, _, _, _ = load_replay()
     active_model, consistency_model = load_guard_bundle()
 
+    sidebar_fault_request = st.session_state.pop("sidebar_fault_request", None)
+    if sidebar_fault_request:
+        try:
+            request_start = min(int(st.session_state.sim_cursor), max(0, len(frame) - CONFIRMATION_WINDOWS))
+            st.session_state.manual_event = _create_named_fault_event(
+                frame,
+                consistency_model,
+                request_start,
+                sidebar_fault_request["fault"],
+                sidebar_fault_request["severity"],
+            )
+            st.session_state.triggered_failure = False
+            st.session_state.triggered_event = None
+            st.session_state.guard_tripped = False
+            st.session_state.guard_code = None
+            st.session_state.engine_failed = False
+            st.session_state.sim_running = True
+        except Exception as exc:
+            st.session_state.sidebar_fault_error = str(exc)
+
     if not embedded:
         st.markdown(
             '<div class="cockpit-head"><div><div class="brand">Power Ranger / unified simulation</div>'
@@ -755,10 +853,18 @@ def render(*, embedded: bool = False) -> None:
             if sensor not in event.get("direct_sensors", [event["sensor"]])
         ]
         coupled_message = "; companion shifts: " + ", ".join(companions) if companions else ""
-        scenario = {
-            **MANUAL_SCENARIO,
-            "message": f"{SENSORS[event['sensor']][0]} biased {primary_bias:+.0%}{coupled_message}.",
-        }
+        if event.get("fault_name"):
+            scenario = {
+                **MANUAL_SCENARIO,
+                "name": f"{event['fault_label']} injection",
+                "code": event["fault_label"].upper(),
+                "message": event["fault_message"],
+            }
+        else:
+            scenario = {
+                **MANUAL_SCENARIO,
+                "message": f"{SENSORS[event['sensor']][0]} biased {primary_bias:+.0%}{coupled_message}.",
+            }
     if event:
         frame, simulated_frame, evidence, guard_evidence, confirmed, health, degradation, failure_time = _apply_triggered_event(frame, base_evidence, consistency_model, event)
     else:

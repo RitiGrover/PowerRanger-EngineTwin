@@ -212,6 +212,22 @@ with st.sidebar.expander("Simulation settings", expanded=False):
     drive_mode = st.selectbox("Drive mode", list(dash.DRIVE_MODES), index=1, key="drive_mode")
     injected = st.selectbox("Inject a fault", FAULTS, key="fault", help="The simulated engine develops this fault 3 s into the stream.")
     severity = st.slider("Fault severity", 0.0, 1.0, 0.8, 0.05, key="severity", disabled=injected == "healthy")
+    if st.button(
+        "Inject fault",
+        key="sidebar_inject_fault",
+        type="primary",
+        use_container_width=True,
+        disabled=injected == "healthy",
+    ):
+        st.session_state.sidebar_fault_request = {
+            "fault": injected,
+            "severity": float(severity),
+        }
+        st.session_state.workspace_section = "Live engine"
+        st.rerun()
+    active_sidebar_fault = (st.session_state.get("manual_event") or {}).get("fault_name")
+    if active_sidebar_fault:
+        st.caption(f"Active: {active_sidebar_fault.replace('+', ' + ').replace('_', ' ').title()}")
     snr_db = st.slider("Noise level (signal-to-noise, dB)", 0, 30, 20, key="snr", help="Lower is noisier. Models were trained on 10 to 25 dB.")
     seed = st.number_input("Random seed", 0, 9999, 7, key="seed")
     st.subheader("Fault loss assumptions")

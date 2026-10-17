@@ -228,6 +228,7 @@ p, li, label, .stMarkdown { line-height:1.55; }
 .stApp [data-testid="stSidebar"] [data-testid="stSidebarContent"] { padding:.35rem .9rem 1rem !important; }
 .stApp [data-testid="stSidebar"] .et-brand { padding:.25rem .15rem .8rem; margin-bottom:.35rem; }
 .stApp [data-testid="stSidebar"] .et-nav-group { margin:.52rem .25rem .2rem; color:#566271; font-size:.58rem; font-weight:600; letter-spacing:.12em; }
+.stApp [data-testid="stSidebar"] div[class*="st-key-sidebar_inject_fault"] button { border-radius:6px !important; }
 .stApp [data-testid="stSidebar"] div[class*="st-key-nav_"] { margin:-.18rem 0 !important; }
 .stApp [data-testid="stSidebar"] div[class*="st-key-nav_"] button,
 .stApp [data-testid="stSidebar"] div[class*="st-key-nav_"] button[kind="secondary"] {
