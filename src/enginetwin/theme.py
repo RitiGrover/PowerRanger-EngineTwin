@@ -71,7 +71,7 @@ def brand_block() -> str:
     )
 
 
-FONT_IMPORT = ""  # Helvetica is a system font; nothing to load
+FONT_IMPORT = "@import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wdth,wght@12..96,75..100,400..700&display=swap');"
 
 THEME_CSS = (
     "<style>"
@@ -82,8 +82,8 @@ THEME_CSS = (
   --et-text:#e6e8ea; --et-muted:#8b9197; --et-dim:#5d636a;
   --et-accent:#a9c4d4; --et-ok:#b9cf9a; --et-warn:#d49a6a; --et-fault:#d9795f;
   --et-cyan:#a9c4d4; --et-green:#b9cf9a; --et-amber:#d49a6a; --et-red:#d9795f;
-  --et-sans:'Helvetica Neue',Helvetica,Arial,sans-serif;
-  --et-mono:'Helvetica Neue',Helvetica,Arial,sans-serif;
+  --et-sans:'Bricolage Grotesque','Segoe UI',Arial,sans-serif;
+  --et-mono:'Bricolage Grotesque','Segoe UI',Arial,sans-serif;
 }
 
 /* ---- canvas: black with a faint graph-paper grid ---------------------------------------- */
@@ -125,20 +125,21 @@ p, li, label, .stMarkdown { line-height:1.55; }
 
 /* ---- sidebar ---------------------------------------------------------------------------- */
 [data-testid="stSidebar"] { background:#0d0f11 !important; border-right:1px solid var(--et-line) !important; }
-[data-testid="stSidebar"] > div:first-child { padding-top:.4rem; }
-.et-brand { display:flex; align-items:center; gap:.7rem; padding:.9rem .25rem 1.1rem; }
+[data-testid="stSidebar"] > div:first-child { padding-top:0 !important; }
+[data-testid="stSidebarContent"] { padding-top:.35rem !important; }
+.et-brand { display:flex; align-items:center; gap:.7rem; padding:.4rem .25rem 1rem; border-bottom:1px solid var(--et-line); margin-bottom:.65rem; }
 .et-brand__mark { display:grid; place-items:center; line-height:0; }
 .et-brand__text { display:flex; flex-direction:column; line-height:1.05; }
-.et-brand__text b { font-size:1.12rem; font-weight:600; letter-spacing:-.02em; color:var(--et-text); }
+.et-brand__text b { font-size:1.34rem; font-weight:650; letter-spacing:-.035em; color:var(--et-text); }
 .et-brand__text small { margin-top:.28rem; font-family:var(--et-mono) !important; font-size:.6rem; letter-spacing:.16em; text-transform:uppercase; color:var(--et-dim); }
-[data-testid="stSidebar"] [role="radiogroup"] { gap:.12rem; }
-[data-testid="stSidebar"] [data-testid="stRadioOption"] { position:relative; width:100%; padding:.5rem .75rem; border-radius:10px; border:1px solid transparent; transition:background .15s, border-color .15s; cursor:pointer; }
-[data-testid="stSidebar"] [data-testid="stRadioOption"]:hover { background:#14171a; }
-[data-testid="stSidebar"] [data-testid="stRadioOption"] > div > div:first-child { display:none !important; }
-[data-testid="stSidebar"] [data-testid="stRadioOption"] p { font-size:.9rem; color:var(--et-muted); margin:0; }
-[data-testid="stSidebar"] [data-selected="true"] > [data-testid="stRadioOption"] { background:#15191c; border-color:var(--et-line-2); }
-[data-testid="stSidebar"] [data-selected="true"] > [data-testid="stRadioOption"] p { color:var(--et-text); font-weight:500; }
-[data-testid="stSidebar"] [data-selected="true"] > [data-testid="stRadioOption"]:before { content:""; position:absolute; left:-1px; top:28%; bottom:28%; width:2px; border-radius:2px; background:var(--et-accent); }
+.et-nav-group { margin:.8rem .35rem .35rem; color:#566271; font-size:.58rem; font-weight:600; letter-spacing:.12em; text-transform:uppercase; }
+[data-testid="stSidebar"] div[class*="st-key-nav_"] { margin:-.08rem 0; }
+[data-testid="stSidebar"] div[class*="st-key-nav_"] button { position:relative; justify-content:flex-start; min-height:2.25rem; padding:.42rem .7rem !important; border-radius:6px !important; border:1px solid transparent !important; background:transparent !important; color:var(--et-muted) !important; box-shadow:none !important; }
+[data-testid="stSidebar"] div[class*="st-key-nav_"] button p { font-size:.88rem; font-weight:450; letter-spacing:.005em; white-space:pre; }
+[data-testid="stSidebar"] div[class*="st-key-nav_"] button:hover { background:#14171a !important; color:var(--et-text) !important; }
+[data-testid="stSidebar"] div[class*="st-key-nav_"] button[kind="primary"] { background:#1a1d25 !important; border-color:#252b38 !important; color:#f0f2f4 !important; }
+[data-testid="stSidebar"] div[class*="st-key-nav_"] button[kind="primary"]:before { content:""; position:absolute; left:-1px; top:24%; bottom:24%; width:3px; border-radius:0 3px 3px 0; background:#9cbcd0; }
+[data-testid="stSidebar"] div[class*="st-key-nav_"] button[kind="primary"] p { font-weight:620; }
 [data-testid="stSidebar"] hr { border-color:var(--et-line); }
 [data-testid="stSidebar"] [data-testid="stExpander"] { border:1px solid var(--et-line); border-radius:12px; background:var(--et-panel); }
 
@@ -222,6 +223,29 @@ p, li, label, .stMarkdown { line-height:1.55; }
 .et-marquee { color:rgba(169,196,212,.05) !important; font-weight:900 !important; }
 .et-drive-meta, .et-drive-status, .et-drive-bottom strong, .et-scroll-cue { color:var(--et-accent) !important; font-family:var(--et-mono) !important; }
 .et-drive-status { border-color:var(--et-line-2) !important; border-radius:999px; }
+
+/* Sidebar navigation sits after the shared button rules so it keeps its own quieter treatment. */
+.stApp [data-testid="stSidebar"] [data-testid="stSidebarContent"] { padding:.35rem .9rem 1rem !important; }
+.stApp [data-testid="stSidebar"] .et-brand { padding:.25rem .15rem .8rem; margin-bottom:.35rem; }
+.stApp [data-testid="stSidebar"] .et-nav-group { margin:.52rem .25rem .2rem; color:#566271; font-size:.58rem; font-weight:600; letter-spacing:.12em; }
+.stApp [data-testid="stSidebar"] div[class*="st-key-nav_"] { margin:-.18rem 0 !important; }
+.stApp [data-testid="stSidebar"] div[class*="st-key-nav_"] button,
+.stApp [data-testid="stSidebar"] div[class*="st-key-nav_"] button[kind="secondary"] {
+  justify-content:flex-start !important; min-height:1.95rem !important; padding:.28rem .62rem !important;
+  border-radius:6px !important; border:1px solid transparent !important;
+  background:transparent !important; color:var(--et-muted) !important; box-shadow:none !important;
+}
+.stApp [data-testid="stSidebar"] div[class*="st-key-nav_"] button > div,
+.stApp [data-testid="stSidebar"] div[class*="st-key-nav_"] button > div > span,
+.stApp [data-testid="stSidebar"] div[class*="st-key-nav_"] button [data-testid="stMarkdownContainer"] { width:100%; }
+.stApp [data-testid="stSidebar"] div[class*="st-key-nav_"] button p { width:100%; margin:0; text-align:left; font-size:.82rem; line-height:1.15; font-variant-numeric:tabular-nums; }
+.stApp [data-testid="stSidebar"] div[class*="st-key-nav_"] button:hover { background:#14171a !important; color:var(--et-text) !important; border-color:transparent !important; }
+.stApp [data-testid="stSidebar"] div[class*="st-key-nav_"] button[kind="primary"] {
+  background:#1a1d25 !important; border-color:#252b38 !important; color:#f0f2f4 !important;
+}
+.stApp [data-testid="stSidebar"] div[class*="st-key-nav_"] button[kind="primary"]:before {
+  content:""; position:absolute; left:-1px; top:22%; bottom:22%; width:3px; border-radius:0 3px 3px 0; background:#9cbcd0;
+}
 
 @media (max-width:900px) { .block-container { padding:1.2rem 1rem 3rem; } }
 @media (prefers-reduced-motion:reduce) { * { animation:none !important; transition:none !important; } }

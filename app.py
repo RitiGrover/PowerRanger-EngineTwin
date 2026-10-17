@@ -49,7 +49,8 @@ REQUIRED_MODELS = ("model_cnn.pkl", "model_softmax.pkl", "model_autoencoder.pkl"
 MISSING_MODELS = [name for name in REQUIRED_MODELS if not (CACHE / name).exists()]
 DEMO_MODE = bool(MISSING_MODELS)
 
-st.set_page_config(page_title="Power Ranger", layout="wide")
+EMPTY_FAVICON = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg'/%3E"
+st.set_page_config(page_title="Power Ranger", page_icon=EMPTY_FAVICON, layout="wide")
 register_plotly_theme()
 if not getattr(st.plotly_chart, "_enginetwin", False):
     # Let the shared Plotly template style every chart instead of Streamlit's own chart theme.
@@ -78,8 +79,8 @@ LANDING_CSS = """<style>
 .stApp:has(.et-landing) iframe { position:fixed; inset:0; width:100vw; height:100vh; border:0; z-index:5; }
 .stApp:has(.et-landing) [data-testid="stElementContainer"]:has(.et-landing) { display:none; }
 .stApp:has(.et-landing) [data-testid="stButton"] { position:fixed; right:4vw; bottom:24px; z-index:50; width:auto; }
-.stApp:has(.et-landing) [data-testid="stButton"] button { height:48px; padding:0 30px; background:#a9c4d4 !important; color:#0f1011 !important; border-color:#a9c4d4 !important; font-weight:600; font-size:.95rem; }
-.stApp:has(.et-landing) [data-testid="stButton"] button:hover { background:#cacdd1 !important; color:#0f1011 !important; }
+.stApp:has(.et-landing) [data-testid="stButton"] button { height:42px; min-width:184px; padding:0 22px; border-radius:6px !important; background:#bd3a33 !important; color:#fff5f3 !important; border-color:#d05249 !important; font-weight:600; font-size:.82rem; box-shadow:0 9px 28px rgba(153,35,29,.20) !important; }
+.stApp:has(.et-landing) [data-testid="stButton"] button:hover { background:#d04a42 !important; color:#ffffff !important; border-color:#e06a61 !important; }
 </style><div class="et-landing"></div>"""
 if not st.session_state.entered_engine_twin:
     st.markdown(LANDING_CSS, unsafe_allow_html=True)
@@ -169,6 +170,12 @@ def summarise(table):
 
 
 SECTIONS = ["Live engine", "Engine map", "Signatures", "Diagnosis", "Sweet spot", "Health", "Data explorer", "Real recording", "Results", "Measured guard", "Synthetic engine"]
+NAV_GROUPS = (
+    ("Monitor", ("Live engine", "Engine map")),
+    ("Analysis", ("Signatures", "Diagnosis", "Synthetic engine")),
+    ("Insights", ("Sweet spot", "Health")),
+    ("Data & evidence", ("Real recording", "Measured guard", "Results", "Data explorer")),
+)
 # Keep page-specific inputs when their widgets are temporarily off screen.
 for input_key in list(st.session_state):
     if input_key in {"guard_enabled", "triggered_failure", "health_day", "heat_fault", "confusion", "liu_scenario", "liu_cursor"} or input_key.startswith("manual_bias_"):
@@ -176,7 +183,24 @@ for input_key in list(st.session_state):
 
 with st.sidebar:
     st.markdown(brand_block(), unsafe_allow_html=True)
-    section = st.radio("Workspace", SECTIONS, key="workspace_section")
+    if st.session_state.get("workspace_section") not in SECTIONS:
+        st.session_state.workspace_section = SECTIONS[0]
+    item_number = 0
+    for group_name, pages in NAV_GROUPS:
+        st.markdown(f'<div class="et-nav-group">{group_name}</div>', unsafe_allow_html=True)
+        for page in pages:
+            item_number += 1
+            key = "nav_" + page.lower().replace(" ", "_").replace("&", "and")
+            selected = st.session_state.workspace_section == page
+            if st.button(
+                f"{item_number:02d}   {page}",
+                key=key,
+                type="primary" if selected else "secondary",
+                use_container_width=True,
+            ):
+                st.session_state.workspace_section = page
+                st.rerun()
+    section = st.session_state.workspace_section
     st.divider()
 
 # ---------------------------------------------------------------- sidebar: controls
