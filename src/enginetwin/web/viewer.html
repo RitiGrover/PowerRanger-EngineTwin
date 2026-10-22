@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+* { box-sizing:border-box; margin:0; padding:0; }
+html, body { height:100%; background:transparent; color:#e6e8ea; font-family:'Helvetica Neue',Helvetica,Arial,sans-serif; overflow:hidden; }
+.card { position:relative; height:100%; background:#111316; border:1px solid #23262b; border-radius:14px; overflow:hidden; }
+#stage { position:absolute; inset:34px 0 70px 0; cursor:grab; }
+.top { position:absolute; left:16px; right:16px; top:12px; display:flex; justify-content:space-between; font:500 10.5px 'Helvetica Neue',Helvetica,Arial,sans-serif; letter-spacing:.08em; text-transform:uppercase; color:#8b9197; }
+.state { color:var(--c,#b9cf9a); }
+.foot { position:absolute; left:14px; right:14px; bottom:12px; display:grid; grid-template-columns:1fr; gap:8px; }
+.m { background:#0d0f11; border:1px solid #23262b; border-radius:10px; padding:8px 10px; }
+.m small { display:block; font:500 9.5px 'Helvetica Neue',Helvetica,Arial,sans-serif; letter-spacing:.07em; text-transform:uppercase; color:#8b9197; }
+.m b { display:block; margin-top:3px; font:500 14px 'Helvetica Neue',Helvetica,Arial,sans-serif; }
+</style>
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}</script>
+</head>
+<body>
+<div class="card">
+  <div class="top"><span>Power Ranger</span><span class="state" id="state"></span></div>
+  <div id="stage"></div>
+  <div class="foot"><div class="m"><small>Calculated health</small><b id="health"></b></div></div>
+</div>
+<script type="application/json" id="data">__DATA__</script>
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+/*__ENGINE3D__*/
+const D = JSON.parse(document.getElementById('data').textContent);
+const PARTS = { misfire:['coil2','inj2','piston2','rod2','crank'], knock:['piston1','piston2','piston3','piston4','head','knock'], valve_wear:['valve1','cams'], sensor_drift:['maf','plenum','throttle'] };
+const hot = []; D.label.split('+').forEach((k) => { if (PARTS[k]) hot.push(...PARTS[k]); });
+const bad = D.label !== 'healthy';
+document.getElementById('state').textContent = (bad ? D.label.replace(/[_+]/g, ' ') : 'nominal');
+document.getElementById('state').style.setProperty('--c', bad ? '#d9795f' : '#b9cf9a');
+document.getElementById('health').textContent = D.health + ' %';
+try {
+  const host = document.getElementById('stage');
+  const stage = createStage(THREE, OrbitControls, RoomEnvironment, host, { camera:[9.5, 4.4, 10.8], target:[0, 0.4, 0], rotateSpeed:1.4, fov:30 });
+  stage.controls.minDistance = 8; stage.controls.maxDistance = 20;
+  const eng = buildEngine(THREE);
+  stage.scene.add(eng.root);
+  eng.setSpeed(Math.max(0.15, D.rpm / 60 * 0.012));
+  eng.setFault(D.label, Math.min(1, D.severity));
+  eng.setHot(hot); eng.setXray(true); eng.setFocus(true);
+  let last = performance.now();
+  (function frame(now) {
+    const dt = Math.min(0.05, (now - last) / 1000); last = now;
+    eng.root.scale.setScalar(1.0); eng.root.position.set(-0.3, -1.2, 0);
+    eng.update(dt); stage.controls.update(); stage.renderer.render(stage.scene, stage.camera);
+    requestAnimationFrame(frame);
+  })(last);
+} catch (e) { console.error(e); }
+</script>
+</body>
+</html>

@@ -31,7 +31,7 @@ def capture_obd(
     connection = obd.OBD(portstr=port or None, fast=False, timeout=1)
     if not connection.is_connected():
         connection.close()
-        raise RuntimeError("No OBD-II adapter connection was established. Check the adapter, port, ignition and drivers.")
+        raise RuntimeError("No OBD-II adapter connection was established. Check the adapter, port, ignition, and drivers.")
     commands = []
     for name in PID_NAMES:
         command = getattr(obd.commands, name, None)

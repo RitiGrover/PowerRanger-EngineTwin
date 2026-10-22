@@ -102,7 +102,7 @@ MANUAL_SCENARIO = {
     "extra_drift": 0.50,
 }
 
-PLOT_COLORS = ["#d8b453", "#c7b796", "#9ba9ba", "#a1b3a2"]
+PLOT_COLORS = ["#6aa5e0", "#b08be0", "#5ec2b7", "#e0a15f"]
 DETECTOR_LABELS = {
     "f_pic": "Intercooler pressure",
     "f_pim": "Manifold pressure",
@@ -124,77 +124,77 @@ def _page_css() -> None:
         <style>
         600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Arial:wght@400;500;600&display=swap');
         :root {
-          --void:#06121b; --panel:#0b1c28; --panel-hi:#102735; --line:#244052;
-          --ice:#f5f4ef; --cyan:#d8b453; --mint:#a1b3a2; --amber:#c7b796;
-          --red:#d78b80; --muted:#b3b3aa;
+          --void:#0f1012; --panel:#181a1b; --panel-hi:#202325; --line:#373b3f;
+          --ice:#f5f4ef; --cyan:#a9c4d4; --mint:#a1b3a2; --amber:#8fa3b3;
+          --red:#e0614f; --muted:#9aa0a6;
         }
-        html, body, [class*="css"] { font-family:'Arial',sans-serif; }
+        html, body, [class*="css"] { font-family:'Helvetica Neue',Helvetica,Arial,sans-serif; }
         .stApp, [data-testid="stAppViewContainer"] {
           background:
-            radial-gradient(circle at 72% -20%, rgba(49,128,164,.20), transparent 38%),
-            linear-gradient(145deg, #151614 0%, var(--void) 54%, #081925 100%);
+            radial-gradient(circle at 72% -20%, rgba(99,106,114,.20), transparent 38%),
+            linear-gradient(145deg, #101214 0%, var(--void) 54%, #151618 100%);
           color:var(--ice);
         }
         [data-testid="stHeader"], [data-testid="stToolbar"], footer { display:none !important; }
         .block-container { max-width:1540px; padding:1.05rem 1.6rem 1.2rem; }
         .stMarkdown, .stMarkdown p, label, [data-testid="stCaptionContainer"] { color:var(--ice) !important; }
-        h1,h2,h3 { font-family:'Arial',sans-serif !important; color:var(--ice) !important; }
+        h1,h2,h3 { font-family:'Helvetica Neue',Helvetica,Arial,sans-serif !important; color:var(--ice) !important; }
         div[data-testid="stHorizontalBlock"] { gap:.75rem; }
         .cockpit-head { display:flex; align-items:flex-end; justify-content:space-between; gap:1rem; margin-bottom:.65rem; }
-        .brand { font:600 .69rem 'Arial'; letter-spacing:.22em; color:var(--cyan); text-transform:uppercase; }
-        .title { font:700 2.15rem/1 'Arial'; letter-spacing:.01em; color:var(--ice); margin:.22rem 0 .16rem; }
+        .brand { font:600 .69rem 'Helvetica Neue',Helvetica,Arial; letter-spacing:.22em; color:var(--cyan); text-transform:uppercase; }
+        .title { font:700 2.15rem/1 'Helvetica Neue',Helvetica,Arial; letter-spacing:.01em; color:var(--ice); margin:.22rem 0 .16rem; }
         .subtitle { font-size:.82rem; color:var(--muted); }
-        .live-pill { display:flex; align-items:center; gap:.5rem; border:1px solid #24617a; background:#0a2634; padding:.42rem .68rem; font:600 .67rem 'Arial'; letter-spacing:.08em; color:var(--cyan); }
+        .live-pill { display:flex; align-items:center; gap:.5rem; border:1px solid #494f55; background:#1d1f21; padding:.42rem .68rem; font:600 .67rem 'Helvetica Neue',Helvetica,Arial; letter-spacing:.08em; color:var(--cyan); }
         .live-dot { width:7px; height:7px; border-radius:50%; background:var(--cyan); box-shadow:0 0 12px var(--cyan); animation:pulse 1.25s infinite; }
         @keyframes pulse { 50% { opacity:.35; transform:scale(.72); } }
-        .control-rail { border:1px solid var(--line); background:rgba(10,28,40,.88); padding:.55rem .7rem; margin-bottom:.7rem; }
-        [data-testid="stButton"] button { width:100%; min-height:2.15rem; border:1px solid #2d5267 !important; border-radius:2px; background:#0e2837 !important; color:var(--ice) !important; font:600 .72rem 'Arial'; }
+        .control-rail { border:1px solid var(--line); background:rgba(23,25,27,.88); padding:.55rem .7rem; margin-bottom:.7rem; }
+        [data-testid="stButton"] button { width:100%; min-height:2.15rem; border:1px solid #454a4f !important; border-radius:2px; background:#202325 !important; color:var(--ice) !important; font:600 .72rem 'Helvetica Neue',Helvetica,Arial; }
         [data-testid="stButton"] button:hover { border-color:var(--cyan) !important; color:var(--cyan) !important; }
         [data-testid="stButton"] button:focus-visible { outline:2px solid var(--cyan); outline-offset:2px; }
         .clock { height:100%; display:flex; flex-direction:column; justify-content:center; border-left:1px solid var(--line); padding-left:1rem; }
-        .clock strong { font:600 1.25rem 'Arial'; color:var(--ice); }
-        .clock span { font:500 .61rem 'Arial'; letter-spacing:.12em; color:var(--muted); text-transform:uppercase; }
+        .clock strong { font:600 1.25rem 'Helvetica Neue',Helvetica,Arial; color:var(--ice); }
+        .clock span { font:500 .61rem 'Helvetica Neue',Helvetica,Arial; letter-spacing:.12em; color:var(--muted); text-transform:uppercase; }
         .kpi-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:.6rem; margin-bottom:.7rem; }
-        .kpi { position:relative; overflow:hidden; min-height:74px; padding:.68rem .78rem; border:1px solid var(--line); background:linear-gradient(135deg, rgba(16,39,53,.96), rgba(9,27,39,.96)); }
+        .kpi { position:relative; overflow:hidden; min-height:74px; padding:.68rem .78rem; border:1px solid var(--line); background:linear-gradient(135deg, rgba(32,35,37,.96), rgba(22,24,26,.96)); }
         .kpi:after { content:''; position:absolute; inset:auto 0 0; height:2px; background:var(--accent,var(--cyan)); box-shadow:0 0 14px var(--accent,var(--cyan)); }
-        .k-label { font:500 .59rem 'Arial'; letter-spacing:.13em; color:var(--muted); text-transform:uppercase; }
-        .k-value { font:700 1.72rem/1 'Arial'; color:var(--ice); margin:.28rem 0 .15rem; }
+        .k-label { font:500 .59rem 'Helvetica Neue',Helvetica,Arial; letter-spacing:.13em; color:var(--muted); text-transform:uppercase; }
+        .k-value { font:700 1.72rem/1 'Helvetica Neue',Helvetica,Arial; color:var(--ice); margin:.28rem 0 .15rem; }
         .k-note { font-size:.67rem; color:var(--muted); }
-        .panel { border:1px solid var(--line); background:rgba(8,25,36,.90); padding:.7rem; }
-        .panel-label { font:600 .62rem 'Arial'; color:var(--muted); letter-spacing:.14em; text-transform:uppercase; margin-bottom:.35rem; }
+        .panel { border:1px solid var(--line); background:rgba(20,22,24,.90); padding:.7rem; }
+        .panel-label { font:600 .62rem 'Helvetica Neue',Helvetica,Arial; color:var(--muted); letter-spacing:.14em; text-transform:uppercase; margin-bottom:.35rem; }
         .engine-core { display:grid; place-items:center; min-height:162px; position:relative; overflow:hidden; }
-        .engine-core:before { content:''; position:absolute; width:245px; height:245px; border:1px solid rgba(94,229,255,.12); border-radius:50%; box-shadow:0 0 0 30px rgba(94,229,255,.02),0 0 0 60px rgba(94,229,255,.015); }
-        .health-ring { --score:80; --ring:var(--cyan); width:138px; height:138px; display:grid; place-items:center; border-radius:50%; background:conic-gradient(var(--ring) calc(var(--score)*1%), #17313f 0); filter:drop-shadow(0 0 16px rgba(94,229,255,.18)); }
-        .health-ring:before { content:''; position:absolute; width:116px; height:116px; border-radius:50%; background:#081a25; border:1px solid #274556; }
+        .engine-core:before { content:''; position:absolute; width:245px; height:245px; border:1px solid rgba(169,174,180,.12); border-radius:50%; box-shadow:0 0 0 30px rgba(169,174,180,.02),0 0 0 60px rgba(169,174,180,.015); }
+        .health-ring { --score:80; --ring:var(--cyan); width:138px; height:138px; display:grid; place-items:center; border-radius:50%; background:conic-gradient(var(--ring) calc(var(--score)*1%), #282b2e 0); filter:drop-shadow(0 0 16px rgba(169,174,180,.18)); }
+        .health-ring:before { content:''; position:absolute; width:116px; height:116px; border-radius:50%; background:#151618; border:1px solid #3a3e43; }
         .health-copy { position:relative; z-index:2; text-align:center; }
-        .health-copy strong { display:block; font:700 2.3rem/1 'Arial'; }
-        .health-copy span { font:500 .57rem 'Arial'; letter-spacing:.13em; color:var(--muted); text-transform:uppercase; }
-        .state-line { display:flex; align-items:center; justify-content:center; gap:.4rem; margin-top:.55rem; font:600 .65rem 'Arial'; color:var(--state); letter-spacing:.08em; }
-        .bus { display:grid; grid-template-columns:120px repeat(10,minmax(0,1fr)); align-items:stretch; border:1px solid var(--line); background:#071923; margin:.7rem 0; overflow:hidden; }
-        .bus-title { padding:.58rem .68rem; border-right:1px solid var(--line); font:600 .58rem 'Arial'; letter-spacing:.12em; color:var(--cyan); text-transform:uppercase; }
-        .packet { position:relative; overflow:hidden; padding:.48rem .35rem; border-right:1px solid rgba(36,64,82,.7); text-align:center; font:500 .52rem 'Arial'; color:#86a8b8; white-space:nowrap; }
+        .health-copy strong { display:block; font:700 2.3rem/1 'Helvetica Neue',Helvetica,Arial; }
+        .health-copy span { font:500 .57rem 'Helvetica Neue',Helvetica,Arial; letter-spacing:.13em; color:var(--muted); text-transform:uppercase; }
+        .state-line { display:flex; align-items:center; justify-content:center; gap:.4rem; margin-top:.55rem; font:600 .65rem 'Helvetica Neue',Helvetica,Arial; color:var(--state); letter-spacing:.08em; }
+        .bus { display:grid; grid-template-columns:120px repeat(10,minmax(0,1fr)); align-items:stretch; border:1px solid var(--line); background:#141516; margin:.7rem 0; overflow:hidden; }
+        .bus-title { padding:.58rem .68rem; border-right:1px solid var(--line); font:600 .58rem 'Helvetica Neue',Helvetica,Arial; letter-spacing:.12em; color:var(--cyan); text-transform:uppercase; }
+        .packet { position:relative; overflow:hidden; padding:.48rem .35rem; border-right:1px solid rgba(55,59,63,.7); text-align:center; font:500 .52rem 'Helvetica Neue',Helvetica,Arial; color:#989fa6; white-space:nowrap; }
         .packet:after { content:''; position:absolute; left:-45%; bottom:0; width:38%; height:2px; background:var(--packet); box-shadow:0 0 9px var(--packet); animation:packet 1.8s linear infinite; animation-delay:var(--delay); }
         @keyframes packet { to { left:112%; } }
         .sensor-grid { display:grid; grid-template-columns:repeat(5,1fr); gap:.52rem; }
-        .sensor { position:relative; min-height:74px; border:1px solid #203d4d; background:rgba(10,30,42,.92); padding:.62rem .66rem; overflow:hidden; }
+        .sensor { position:relative; min-height:74px; border:1px solid #33363a; background:rgba(24,26,28,.92); padding:.62rem .66rem; overflow:hidden; }
         .sensor:before { content:''; position:absolute; left:0; top:0; bottom:0; width:2px; background:var(--status); box-shadow:0 0 10px var(--status); }
-        .sensor-name { font:500 .56rem 'Arial'; letter-spacing:.08em; color:#7f9bab; text-transform:uppercase; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-        .sensor-value { margin:.22rem 0 .12rem; font:600 1.27rem/1 'Arial'; color:var(--ice); }
-        .sensor-meta { display:flex; justify-content:space-between; font:500 .54rem 'Arial'; color:#627f8e; }
+        .sensor-name { font:500 .56rem 'Helvetica Neue',Helvetica,Arial; letter-spacing:.08em; color:#8e959c; text-transform:uppercase; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+        .sensor-value { margin:.22rem 0 .12rem; font:600 1.27rem/1 'Helvetica Neue',Helvetica,Arial; color:var(--ice); }
+        .sensor-meta { display:flex; justify-content:space-between; font:500 .54rem 'Helvetica Neue',Helvetica,Arial; color:#707880; }
         .sensor-status { color:var(--status); }
-        .event { border-left:2px solid var(--event); padding:.48rem .62rem; background:rgba(15,38,51,.78); margin:.4rem 0; }
-        .event strong { display:block; font:600 .65rem 'Arial'; color:var(--event); }
-        .event span { font-size:.68rem; color:#88a4b3; }
-        .guard-alert { display:flex; align-items:center; justify-content:space-between; gap:1rem; min-height:72px; margin:.1rem 0 .7rem; padding:.72rem 1rem; border:2px solid var(--red); background:linear-gradient(90deg,rgba(104,12,25,.97),rgba(38,8,17,.96)); box-shadow:0 0 28px rgba(255,104,120,.28),inset 0 0 28px rgba(255,104,120,.08); animation:guard-pulse 1.15s ease-in-out infinite alternate; }
-        .guard-alert strong { display:block; font:700 1.65rem/1 'Arial'; letter-spacing:.05em; color:#fff; }
-        .guard-alert span { display:block; margin-top:.25rem; font:500 .66rem 'Arial'; color:#ffc3ca; letter-spacing:.04em; }
-        .guard-alert .guard-mark { flex:0 0 auto; font:700 1rem 'Arial'; color:#fff; border:1px solid #ff9aa5; padding:.55rem .75rem; text-align:center; }
-        @keyframes guard-pulse { from { border-color:#d78b80; } to { border-color:#ffb0b8; box-shadow:0 0 42px rgba(255,104,120,.42),inset 0 0 30px rgba(255,104,120,.12); } }
+        .event { border-left:2px solid var(--event); padding:.48rem .62rem; background:rgba(31,33,35,.78); margin:.4rem 0; }
+        .event strong { display:block; font:600 .65rem 'Helvetica Neue',Helvetica,Arial; color:var(--event); }
+        .event span { font-size:.68rem; color:#979ea4; }
+        .guard-alert { display:flex; align-items:center; justify-content:space-between; gap:1rem; min-height:72px; margin:.1rem 0 .7rem; padding:.72rem 1rem; border:2px solid var(--red); background:linear-gradient(90deg,rgba(104,12,25,.97),rgba(38,8,17,.96)); box-shadow:0 0 28px rgba(217,121,95,.28),inset 0 0 28px rgba(217,121,95,.08); animation:guard-pulse 1.15s ease-in-out infinite alternate; }
+        .guard-alert strong { display:block; font:700 1.65rem/1 'Helvetica Neue',Helvetica,Arial; letter-spacing:.05em; color:#fff; }
+        .guard-alert span { display:block; margin-top:.25rem; font:500 .66rem 'Helvetica Neue',Helvetica,Arial; color:#f0c4b6; letter-spacing:.04em; }
+        .guard-alert .guard-mark { flex:0 0 auto; font:700 1rem 'Helvetica Neue',Helvetica,Arial; color:#fff; border:1px solid #f0c4b6; padding:.55rem .75rem; text-align:center; }
+        @keyframes guard-pulse { from { border-color:#e0614f; } to { border-color:#f0c4b6; box-shadow:0 0 42px rgba(217,121,95,.42),inset 0 0 30px rgba(217,121,95,.12); } }
         [data-testid="stToggle"] { padding:.15rem .7rem .2rem; border-left:1px solid var(--line); }
-        [data-testid="stToggle"] label p { font:600 .69rem 'Arial' !important; color:var(--cyan) !important; }
-        div[data-testid="stPlotlyChart"] { border:1px solid var(--line); background:rgba(8,25,36,.90); }
+        [data-testid="stToggle"] label p { font:600 .69rem 'Helvetica Neue',Helvetica,Arial !important; color:var(--cyan) !important; }
+        div[data-testid="stPlotlyChart"] { border:1px solid var(--line); background:rgba(20,22,24,.90); }
         .stProgress > div > div > div { background:linear-gradient(90deg,var(--cyan),var(--mint)); }
-        [data-testid="stProgressBar"] { background:#122d3a; }
+        [data-testid="stProgressBar"] { background:#232629; }
         @media(max-width:900px) { .sensor-grid{grid-template-columns:repeat(2,1fr)} .bus{grid-template-columns:90px repeat(5,1fr)} .packet:nth-child(n+7){display:none} .kpi-grid{grid-template-columns:repeat(2,1fr)} }
         @media(prefers-reduced-motion:reduce){ .live-dot,.packet:after,.guard-alert{animation:none!important} }
         </style>
@@ -262,7 +262,7 @@ def load_replay(_run_id: str = BASELINE_RUN_ID) -> tuple[pd.DataFrame, pd.DataFr
     health = (100 - 62 * np.clip((peak - 0.5) / 1.5, 0, 1)).clip(18, 100)
 
     # This is a genuinely healthy held-out trace. The event toggle adds faults
-    # and simulated consequences later. The off state remains fault-free.
+    # and simulated consequences later, so the off state remains fault-free.
     return (
         frame,
         frame.copy(),
@@ -432,12 +432,12 @@ def _apply_triggered_event(
 
 def _state(score: float, confirmed: bool, active: bool) -> tuple[str, str, str]:
     if confirmed:
-        return "FAULT CONFIRMED", "#d78b80", "sensor consistency failed"
+        return "FAULT CONFIRMED", "#e0614f", "sensor consistency failed"
     if score >= ENGINEGUARD_THRESHOLD:
-        return "VERIFYING", "#c7b796", "one residual threshold hit"
+        return "VERIFYING", "#e0a15f", "one residual threshold hit"
     if active:
-        return "FAULT UNDER TEST", "#c7b796", "waiting for corroboration"
-    return "NOMINAL", "#a1b3a2", "stable"
+        return "FAULT UNDER TEST", "#e0a15f", "waiting for corroboration"
+    return "NOMINAL", "#6dbf8b", "stable"
 
 
 def _timeline(frame: pd.DataFrame, guard_evidence: pd.DataFrame, confirmed: pd.DataFrame, cursor: int, guard_enabled: bool, failure_time: float, triggered_event: dict | None = None) -> go.Figure:
@@ -458,41 +458,40 @@ def _timeline(frame: pd.DataFrame, guard_evidence: pd.DataFrame, confirmed: pd.D
         fig.add_trace(go.Scatter(x=x, y=normalized, mode="lines", name=SENSORS[sensor][0], line=dict(color=color, width=2)), row=1, col=1)
     peak = guard_evidence.max(axis=1)
     visible_evidence = peak.iloc[start : cursor + 1]
+    clipped = visible_evidence.clip(upper=EVIDENCE_DISPLAY_CAP)
+    # Within the learned healthy limit the evidence is drawn green; beyond it, red.
     fig.add_trace(go.Scatter(
-        x=x,
-        y=visible_evidence.clip(upper=EVIDENCE_DISPLAY_CAP),
-        customdata=visible_evidence,
-        hovertemplate="fault evidence %{customdata:.2f}×<extra></extra>",
-        mode="lines",
-        name="fault evidence",
-        line=dict(color="#d78b80", width=2),
-        fill="tozeroy",
-        fillcolor="rgba(255,104,120,.10)",
+        x=x, y=clipped.clip(upper=ENGINEGUARD_THRESHOLD), customdata=visible_evidence, hovertemplate="within limit %{customdata:.2f}×<extra></extra>",
+        mode="lines", name="within limit", line=dict(color="#6dbf8b", width=2), fill="tozeroy", fillcolor="rgba(109,191,139,.16)",
     ), row=2, col=1)
-    fig.add_hline(y=ENGINEGUARD_THRESHOLD, line_color="#d78b80", line_dash="dash", opacity=.65, row=2, col=1)
+    fig.add_trace(go.Scatter(
+        x=x, y=clipped.where(visible_evidence > ENGINEGUARD_THRESHOLD), customdata=visible_evidence, hovertemplate="fault evidence %{customdata:.2f}×<extra></extra>",
+        mode="lines", name="fault evidence", line=dict(color="#e0614f", width=2.5), fill="tozeroy", fillcolor="rgba(224,97,79,.22)",
+    ), row=2, col=1)
+    fig.add_hline(y=ENGINEGUARD_THRESHOLD, line_color="#e0614f", line_dash="dash", opacity=.65, row=2, col=1)
     onset = float(frame["injection_time_s"].iloc[0])
     candidates = frame.loc[confirmed.any(axis=1), "window_end_s"]
     detection_at = float(candidates.iloc[0]) if not candidates.empty else None
     if guard_enabled and detection_at is not None and len(x) and x.min() <= detection_at <= x.max():
-        fig.add_vline(x=detection_at, line_color="#d78b80", line_dash="dash", annotation_text="fault confirmed", annotation_position="top right", annotation_font_color="#d78b80", row=1, col=1)
+        fig.add_vline(x=detection_at, line_color="#e0614f", line_dash="dash", annotation_text="fault confirmed", annotation_position="top right", annotation_font_color="#e0614f", row=1, col=1)
     if len(x) and x.min() <= onset <= x.max():
-        fig.add_vline(x=onset, line_color="#c7b796", line_dash="dot", annotation_text="INJECTION", annotation_position="top left", annotation_font_color="#c7b796", row=1, col=1)
+        fig.add_vline(x=onset, line_color="#8fa3b3", line_dash="dot", annotation_text="INJECTION", annotation_position="top left", annotation_font_color="#8fa3b3", row=1, col=1)
     if triggered_event:
         event_at = float(triggered_event["onset"])
         if len(x) and x.min() <= event_at <= x.max():
             label = "MANUAL SENSOR INJECTION" if triggered_event.get("kind") == "manual" else "TRIGGERED FAILURE EVENT"
-            fig.add_vline(x=event_at, line_color="#c7b796", line_dash="dash", annotation_text=label, annotation_position="top left", annotation_font_color="#c7b796", row=1, col=1)
+            fig.add_vline(x=event_at, line_color="#8fa3b3", line_dash="dash", annotation_text=label, annotation_position="top left", annotation_font_color="#8fa3b3", row=1, col=1)
     if len(x) and x.min() <= failure_time <= x.max():
-        fig.add_vline(x=failure_time, line_color="#d78b80", line_dash="dot", annotation_text="SIMULATED FAILURE", annotation_position="top right", annotation_font_color="#d78b80", row=1, col=1)
+        fig.add_vline(x=failure_time, line_color="#e0614f", line_dash="dot", annotation_text="SIMULATED FAILURE", annotation_position="top right", annotation_font_color="#e0614f", row=1, col=1)
     fig.update_layout(
-        height=380, margin=dict(l=42, r=20, t=72, b=42), paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="#151614",
-        font=dict(family="Helvetica, Arial, sans-serif", size=12, color="#b3b3aa"), title=dict(text="Sensor history", x=.018, font=dict(size=12, color="#f5f4ef")),
+        height=380, margin=dict(l=42, r=20, t=72, b=42), paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="#101214",
+        font=dict(family="Helvetica, Arial, sans-serif", size=12, color="#9aa0a6"), title=dict(text="Sensor history", x=.018, font=dict(size=12, color="#f5f4ef")),
         legend=dict(orientation="h", y=1.16, x=0, font=dict(size=11)), title_y=.98, hovermode="x unified",
     )
     fig.update_xaxes(range=[max(0, float(x.iloc[-1]) - VISIBLE_WINDOWS * 5), max(VISIBLE_WINDOWS * 5, float(x.iloc[-1]))])
-    fig.update_xaxes(gridcolor="#30312d", zeroline=False, title_text="dataset time · seconds", row=2, col=1)
-    fig.update_yaxes(gridcolor="#30312d", zeroline=False, range=[-.05, 1.05], showticklabels=False, row=1, col=1)
-    fig.update_yaxes(gridcolor="#30312d", zeroline=False, range=[0, EVIDENCE_DISPLAY_CAP * 1.05], title_text="× limit", row=2, col=1)
+    fig.update_xaxes(gridcolor="#26292d", zeroline=False, title_text="dataset time · seconds", row=2, col=1)
+    fig.update_yaxes(gridcolor="#26292d", zeroline=False, range=[-.05, 1.05], showticklabels=False, row=1, col=1)
+    fig.update_yaxes(gridcolor="#26292d", zeroline=False, range=[0, EVIDENCE_DISPLAY_CAP * 1.05], title_text="× limit", row=2, col=1)
     return fig
 
 
@@ -502,12 +501,12 @@ def _acoustic_figure(rpm: int, load_percent: int, cursor: int) -> go.Figure:
     samples = min(len(window.sound), 1600)
     time_ms = np.arange(samples) / window.sound_fs * 1000
     fig = go.Figure()
-    fig.add_trace(go.Scattergl(x=time_ms, y=window.sound[:samples], mode="lines", line=dict(color="#d8b453", width=1), name="mic"))
-    fig.add_trace(go.Scattergl(x=time_ms, y=window.vibration[:samples] - .65, mode="lines", line=dict(color="#c7b796", width=1), name="accel"))
+    fig.add_trace(go.Scattergl(x=time_ms, y=window.sound[:samples], mode="lines", line=dict(color="#a9c4d4", width=1), name="mic"))
+    fig.add_trace(go.Scattergl(x=time_ms, y=window.vibration[:samples] - .65, mode="lines", line=dict(color="#8fa3b3", width=1), name="accel"))
     fig.update_layout(
-        height=190, margin=dict(l=16, r=12, t=38, b=24), paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="#151614",
-        font=dict(family="Arial", size=9, color="#b3b3aa"), title=dict(text="Sound and vibration", x=.025, font=dict(size=11, color="#f5f4ef")),
-        xaxis=dict(title="milliseconds", gridcolor="#30312d", zeroline=False), yaxis=dict(showticklabels=False, gridcolor="#30312d", zeroline=False),
+        height=190, margin=dict(l=16, r=12, t=38, b=24), paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="#101214",
+        font=dict(family="Helvetica Neue, Helvetica, Arial", size=9, color="#9aa0a6"), title=dict(text="Sound and vibration", x=.025, font=dict(size=11, color="#f5f4ef")),
+        xaxis=dict(title="milliseconds", gridcolor="#26292d", zeroline=False), yaxis=dict(showticklabels=False, gridcolor="#26292d", zeroline=False),
         legend=dict(orientation="h", y=1.14, x=1, xanchor="right", font=dict(size=9)),
     )
     return fig
@@ -524,18 +523,18 @@ def _sensor_cards(row: pd.Series, zrow: pd.Series, guard_row: pd.Series, confirm
             model_value = float(guard_row[code])
             evidence_text = f"guard {model_value:.2f}×"
             if bool(confirmed_row[code]):
-                color, status = "#d78b80", "confirmed"
+                color, status = "#e0614f", "confirmed"
             elif model_value >= ENGINEGUARD_THRESHOLD:
-                color, status = "#c7b796", "single hit"
+                color, status = "#8fa3b3", "single hit"
             else:
                 color, status = "#a1b3a2", "consistent"
         else:
             model_value = float(abs(zrow[sensor]))
             evidence_text = f"baseline {model_value:.1f}σ"
             if model_value >= 4:
-                color, status = "#d78b80", "deviating"
+                color, status = "#e0614f", "deviating"
             elif model_value >= 2:
-                color, status = "#c7b796", "watch"
+                color, status = "#8fa3b3", "watch"
             else:
                 color, status = "#a1b3a2", "streaming"
         cards.append(
@@ -549,7 +548,7 @@ def _sensor_cards(row: pd.Series, zrow: pd.Series, guard_row: pd.Series, confirm
 def _data_bus(zrow: pd.Series) -> str:
     packets = []
     for i, sensor in enumerate(SENSORS):
-        color = "#d78b80" if abs(float(zrow[sensor])) >= 4 else "#c7b796" if abs(float(zrow[sensor])) >= 2 else "#d8b453"
+        color = "#e0614f" if abs(float(zrow[sensor])) >= 4 else "#8fa3b3" if abs(float(zrow[sensor])) >= 2 else "#a9c4d4"
         short = SENSORS[sensor][0].replace(" pressure", "").replace(" temperature", " temp")
         packets.append(f'<div class="packet" style="--packet:{color};--delay:-{i * .16:.2f}s">{escape(short)}</div>')
     return '<div class="bus"><div class="bus-title">MODEL FEATURE BUS<br>10 streams</div>' + "".join(packets) + "</div>"
@@ -557,28 +556,28 @@ def _data_bus(zrow: pd.Series) -> str:
 
 def _events(elapsed: float, onset: float, active: bool, score: float, detected_code: str, scenario: dict, guard_enabled: bool, guard_tripped: bool, degradation: float, engine_failed: bool) -> str:
     entries = [
-        ("#d8b453", "10 streams synchronized", "Five-second windows arriving from the predefined LiU-ICE replay."),
+        ("#a9c4d4", "10 streams synchronized", "Five-second windows arriving from the predefined LiU-ICE replay."),
         ("#a1b3a2", "Consistency model online", "Ten healthy-only sensor-consistency signatures are monitored against the replay."),
     ]
     if guard_enabled:
-        entries.append(("#d8b453", "EngineGuard armed", f"Shutdown requires two of three limit hits and at least {CONFIRMATION_PEAK:.2f}× evidence in the current window."))
+        entries.append(("#a9c4d4", "EngineGuard armed", f"Shutdown requires two of three limit hits and at least {CONFIRMATION_PEAK:.2f}× evidence in the current window."))
     if guard_tripped:
-        entries.append(("#d78b80", "Sensor fault confirmed", f"{DETECTOR_LABELS[detected_code]} residual reached {score:.2f}× its learned limit. Manual inspection required."))
-        entries.append(("#c7b796", "Evidence rule satisfied", f"Two of three windows crossed the limit and current evidence reached at least {CONFIRMATION_PEAK:.2f}×."))
+        entries.append(("#e0614f", "Sensor fault confirmed", f"{DETECTOR_LABELS[detected_code]} residual reached {score:.2f}× its learned limit. Manual inspection required."))
+        entries.append(("#8fa3b3", "Evidence rule satisfied", f"Two of three windows crossed the limit and current evidence reached at least {CONFIRMATION_PEAK:.2f}×."))
     if active:
-        entries.append(("#d78b80", f"{scenario['name']} injected", scenario["message"]))
+        entries.append(("#e0614f", f"{scenario['name']} injected", scenario["message"]))
     else:
         entries.append(("#a1b3a2", "Triggered failure event off", "Healthy source replay; no fault or failure progression is active."))
     if degradation > 0 and not guard_tripped:
-        entries.append(("#c7b796", "Simulated degradation", f"Virtual damage progression is at {degradation:.0%}; coupled airflow, pressure, fuel and speed are deteriorating."))
+        entries.append(("#8fa3b3", "Simulated degradation", f"Virtual damage progression is at {degradation:.0%}; coupled airflow, pressure, fuel, and speed are deteriorating."))
     if engine_failed:
-        entries.append(("#d78b80", "Simulated engine failure", "Health reached zero and the engine stalled. Restart or select a new run."))
+        entries.append(("#e0614f", "Simulated engine failure", "Health reached zero and the engine stalled. Restart or select a new run."))
     return "".join(f'<div class="event" style="--event:{c}"><strong>{escape(t)}</strong><span>{escape(d)}</span></div>' for c, t, d in entries[-4:])
 
 
 def render(*, embedded: bool = False) -> None:
     if not embedded:
-        st.set_page_config(page_title="EngineTwin · Live Simulation", page_icon="◉", layout="wide", initial_sidebar_state="collapsed")
+        st.set_page_config(page_title="Power Ranger · Live Simulation", page_icon="◉", layout="wide", initial_sidebar_state="collapsed")
         _page_css()
     if not DATASET.is_file():
         st.error("The prepared LiU-ICE replay is missing. Run `python prepare_liu_ice.py` and reload the dashboard.")
@@ -608,7 +607,7 @@ def render(*, embedded: bool = False) -> None:
 
     if not embedded:
         st.markdown(
-            '<div class="cockpit-head"><div><div class="brand">EngineTwin / unified simulation</div>'
+            '<div class="cockpit-head"><div><div class="brand">Power Ranger / unified simulation</div>'
             '<div class="title">LIVE ENGINE TELEMETRY</div><div class="subtitle">LiU-ICE replay · inject a manual sensor bias or arm a benchmark preset</div></div>'
             '<div class="live-pill"><span class="live-dot"></span> DATA LINK ACTIVE</div></div>',
             unsafe_allow_html=True,
@@ -704,11 +703,11 @@ def render(*, embedded: bool = False) -> None:
                 if st.session_state.guard_enabled:
                     st.success(f"Guard preview confirms {DETECTOR_LABELS[preview_code]} at {peak:.2f}× its learned limit. EngineGuard will stop the replay when the evidence rule is reached.")
                 else:
-                    st.warning(f"Guard preview confirms {DETECTOR_LABELS[preview_code]} at {peak:.2f}×. EngineGuard is off. Enable it to stop the replay.")
+                    st.warning(f"Guard preview confirms {DETECTOR_LABELS[preview_code]} at {peak:.2f}×, but EngineGuard is off. Enable it to stop the replay.")
             else:
-                st.warning("This sensor's bias does not yet satisfy its own guard rule. Its healthy replay may already trip that limit here. Increase its magnitude, change direction or wait for a cleaner replay window.")
+                st.warning("This sensor's bias does not yet satisfy its own guard rule, or its healthy replay already trips that limit here. Increase its magnitude, change direction, or wait for a cleaner replay window.")
         elif manual_event_active:
-            st.info("Manual fault is active. Use Reset, New Run or Rearm after a guard stop to clear it.")
+            st.info("Manual fault is active. Use Reset, New Run, or Rearm after a guard stop to clear it.")
         else:
             st.caption("Move one or more sensor sliders away from 0% to preview an injection.")
 
@@ -816,7 +815,7 @@ def render(*, embedded: bool = False) -> None:
         if guard_tripped:
             detected_code = str(st.session_state.get("guard_code", detected_code))
             decision_score = float(score_row[detected_code])
-            state, state_color, note = "ENGINE STOPPED", "#d78b80", "EngineGuard evidence intervention"
+            state, state_color, note = "ENGINE STOPPED", "#e0614f", "EngineGuard evidence intervention"
             delay = elapsed - onset
             if delay >= 0:
                 timing = f"Injection occurred {delay:.1f}s earlier. Simulated failure prevented with {failure_time - elapsed:.1f}s remaining."
@@ -829,7 +828,7 @@ def render(*, embedded: bool = False) -> None:
                 unsafe_allow_html=True,
             )
         elif engine_failed:
-            state, state_color, note = "ENGINE FAILED", "#d78b80", "simulated terminal stall"
+            state, state_color, note = "ENGINE FAILED", "#e0614f", "simulated terminal stall"
             health_score = 0.0
             st.markdown(
                 '<div class="guard-alert"><div><strong>⚠ ENGINE FAILURE · POWER LOST</strong>'
@@ -843,9 +842,9 @@ def render(*, embedded: bool = False) -> None:
         load_percent = int(np.clip(float(display_row["throttle_position__mean"]) * 2.2, 0, 100))
         airflow_value, airflow_unit = _value("air_mass_flow", display_row["air_mass_flow__mean"])
         kpis = [
-            ("Engine speed", f"{rpm:,} rpm", "crankshaft estimate", "#d8b453"),
-            ("Manifold pressure", f"{display_row['intake_manifold_pressure__mean'] / 1000:.1f} kPa", "intake tract", "#9ba9ba"),
-            ("Air mass flow", f"{airflow_value} {airflow_unit}", "measured + simulated degradation", "#d78b80" if engine_failed else "#c7b796" if float(degradation.iloc[cursor]) >= .55 else "#a1b3a2"),
+            ("Engine speed", f"{rpm:,} rpm", "crankshaft estimate", "#a9c4d4"),
+            ("Manifold pressure", f"{display_row['intake_manifold_pressure__mean'] / 1000:.1f} kPa", "intake tract", "#a5aab0"),
+            ("Air mass flow", f"{airflow_value} {airflow_unit}", "measured + simulated degradation", "#e0614f" if engine_failed else "#e0a15f" if float(degradation.iloc[cursor]) >= .55 else "#6dbf8b"),
             ("System state", state, f"{elapsed:07.1f}s · frame {cursor + 1:03d}/{len(frame):03d}", state_color),
         ]
         st.markdown('<div class="kpi-grid">' + "".join(
@@ -857,7 +856,7 @@ def render(*, embedded: bool = False) -> None:
         with main:
             live_chart(_timeline(simulated_frame, guard_evidence, confirmed, cursor, st.session_state.guard_enabled, failure_time, event), key="live_timeline", label="Live sensor history and fault evidence")
         with side:
-            ring_color = "#d78b80" if health_score < 50 else "#c7b796" if health_score < 72 else "#a1b3a2"
+            ring_color = "#e0614f" if health_score < 50 else "#e0a15f" if health_score < 72 else "#6dbf8b"
             st.markdown(
                 f'<div class="panel"><div class="panel-label">Calculated engine state</div><div class="engine-core">'
                 f'<div><div class="health-ring" style="--score:{health_score:.0f};--ring:{ring_color}"><div class="health-copy"><strong>{health_score:.0f}</strong><span>health index</span></div></div>'
@@ -869,14 +868,17 @@ def render(*, embedded: bool = False) -> None:
         with st.expander("Signal activity and technical detail"):
             st.caption("Sensor evidence uses the largest standardized change across mean, variation, range and slope.")
             st.markdown(_data_bus(zrow), unsafe_allow_html=True)
-        st.markdown('<div class="panel-label">Sensor readings</div>', unsafe_allow_html=True)
-        st.markdown(_sensor_cards(display_row, zrow, score_row, confirmed_row), unsafe_allow_html=True)
-        tabs = st.tabs(["EVENTS", "COMBUSTION SIGNAL"])
-        with tabs[0]:
-            st.markdown(_events(elapsed, onset, active, decision_score, detected_code, scenario, st.session_state.guard_enabled, guard_tripped, float(degradation.iloc[cursor]), engine_failed), unsafe_allow_html=True)
-        with tabs[1]:
-            live_chart(_acoustic_figure(measured_rpm, load_percent, cursor), key="live_acoustic", label="Simulated sound and vibration")
-            st.caption("Full-width combustion context: a synthetic microphone and accelerometer carrier driven by the measured RPM/load. Fault evidence comes from the LiU-ICE sensors above.")
+        lower_left, lower_right = st.columns([2.25, .75], gap="small")
+        with lower_left:
+            st.markdown('<div class="panel-label">Sensor readings</div>', unsafe_allow_html=True)
+            st.markdown(_sensor_cards(display_row, zrow, score_row, confirmed_row), unsafe_allow_html=True)
+        with lower_right:
+            tabs = st.tabs(["EVENTS", "COMBUSTION"])
+            with tabs[0]:
+                st.markdown(_events(elapsed, onset, active, decision_score, detected_code, scenario, st.session_state.guard_enabled, guard_tripped, float(degradation.iloc[cursor]), engine_failed), unsafe_allow_html=True)
+            with tabs[1]:
+                live_chart(_acoustic_figure(measured_rpm, load_percent, cursor), key="live_acoustic", label="Simulated sound and vibration")
+                st.caption("Synthetic microphone and accelerometer carrier driven by the measured RPM/load. Fault evidence comes from the LiU-ICE sensors above.")
 
         if st.session_state.sim_running:
             st.session_state.sim_cursor = 0 if cursor >= len(frame) - 1 else cursor + 1

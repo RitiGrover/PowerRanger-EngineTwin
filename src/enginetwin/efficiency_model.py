@@ -1,13 +1,9 @@
 """Predict brake thermal efficiency from sensor readings both datasets share (gradient boosting and a small network)."""
 import numpy as np
 import pandas as pd
+import torch
 from sklearn.ensemble import HistGradientBoostingRegressor
-try:  # The dashboard's GBM/demo paths do not require the optional dl extra.
-    import torch
-    from torch import nn
-except ImportError:  # pragma: no cover - exercised by lightweight installs
-    torch = None
-    nn = None
+from torch import nn
 
 from enginetwin.efficiency import brake_thermal_efficiency
 from enginetwin.features import MAX_PLAUSIBLE_BTE
@@ -86,8 +82,6 @@ class _AnnRegressor:
         self.network, self.mean, self.std, self.y_mean, self.y_std = network, mean, std, y_mean, y_std
 
     def predict(self, X):
-        if torch is None:
-            raise ImportError("PyTorch is required to use the ANN efficiency model; install enginetwin[dl].")
         x = torch.tensor((np.asarray(X, dtype=float) - self.mean) / self.std, dtype=torch.float32)
         with torch.no_grad():
             return self.network(x).squeeze(1).numpy().astype(float) * self.y_std + self.y_mean
@@ -95,8 +89,6 @@ class _AnnRegressor:
 
 def fit_ann_efficiency(X, y, seed=0, epochs=60, batch=512):
     """A small network (about 700 weights) on standardised inputs and target, trained in mini-batches."""
-    if torch is None:
-        raise ImportError("PyTorch is required to train the ANN efficiency model; install enginetwin[dl].")
     torch.manual_seed(seed)
     X, y = np.asarray(X, dtype=float), np.asarray(y, dtype=float)
     mean, std, y_mean, y_std = X.mean(axis=0), X.std(axis=0) + 1e-9, y.mean(), y.std() + 1e-9

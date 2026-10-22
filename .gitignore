@@ -225,3 +225,7 @@ __marimo__/
 /.claude/
 /AGENTS.md
 /CLAUDE.md
+
+# local UI backups
+.ui-backup/
+.ui-backup-pre-redesign/

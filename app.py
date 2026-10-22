@@ -31,11 +31,14 @@ from enginetwin.recording import has_obd, obd_from_csv, window_from_wav
 from enginetwin.replay import gear_from_rpm, replay_trip
 from enginetwin.results import autoencoder_table, build_results_table, latency_table, load_confusions
 from enginetwin.schema import FAULTS
-from enginetwin.signals import band_energy_fraction, envelope_spectrum, half_order_ratio, order_spectrum, per_cylinder_energy
+from enginetwin.signals import envelope_spectrum, order_spectrum, per_cylinder_energy
 from enginetwin.spectrograms import window_spectrogram
 from enginetwin.streaming import rolling_windows
 from enginetwin.vehicle import VehicleSpec, engine_point, wheel_power_w
-from enginetwin.ui import COCKPIT_CSS, engine_panel, event_log, hero, metric_card, scroll_engine_simulation, sensor_grid, showroom_landing, toolbar
+from enginetwin.ui import COCKPIT_CSS, engine_panel, event_log, hero, metric_card, scroll_engine_simulation, sensor_grid, toolbar
+from enginetwin.theme import THEME_CSS, brand_block, register_plotly_theme
+from enginetwin.scenes import engine_map_html, engine_viewer_html, landing_html
+from enginetwin.sensor_map import build_payload
 
 ROOT = Path(__file__).resolve().parent
 CACHE = ROOT / "cache"
@@ -46,8 +49,19 @@ REQUIRED_MODELS = ("model_cnn.pkl", "model_softmax.pkl", "model_autoencoder.pkl"
 MISSING_MODELS = [name for name in REQUIRED_MODELS if not (CACHE / name).exists()]
 DEMO_MODE = bool(MISSING_MODELS)
 
-st.set_page_config(page_title="EngineTwin", layout="wide")
+st.set_page_config(page_title="Power Ranger", layout="wide")
+register_plotly_theme()
+if not getattr(st.plotly_chart, "_enginetwin", False):
+    # Let the shared Plotly template style every chart instead of Streamlit's own chart theme.
+    _plotly_chart = st.plotly_chart
+
+    def _themed_plotly_chart(*args, **kwargs):
+        return _plotly_chart(*args, **{"theme": None, **kwargs})
+
+    _themed_plotly_chart._enginetwin = True
+    st.plotly_chart = _themed_plotly_chart
 st.markdown(COCKPIT_CSS, unsafe_allow_html=True)
+st.markdown(THEME_CSS, unsafe_allow_html=True)
 
 # The product-configurator opening is intentionally isolated from the analytical
 # dashboard. This keeps the first impression quiet and avoids loading models
@@ -56,9 +70,21 @@ if "entered_engine_twin" not in st.session_state:
     st.session_state.entered_engine_twin = False
 if st.query_params.get("view") == "cockpit":
     st.session_state.entered_engine_twin = True
+LANDING_CSS = """<style>
+.stApp:has(.et-landing) [data-testid="stHeader"], .stApp:has(.et-landing) [data-testid="stSidebar"],
+.stApp:has(.et-landing) [data-testid="stSidebarCollapsedControl"], .stApp:has(.et-landing) [data-testid="stToolbar"] { display:none !important; }
+.stApp:has(.et-landing)::before { display:none; }
+.stApp:has(.et-landing) .block-container { max-width:none; padding:0; }
+.stApp:has(.et-landing) iframe { position:fixed; inset:0; width:100vw; height:100vh; border:0; z-index:5; }
+.stApp:has(.et-landing) [data-testid="stElementContainer"]:has(.et-landing) { display:none; }
+.stApp:has(.et-landing) [data-testid="stButton"] { position:fixed; right:4vw; bottom:24px; z-index:50; width:auto; }
+.stApp:has(.et-landing) [data-testid="stButton"] button { height:48px; padding:0 30px; background:#a9c4d4 !important; color:#0f1011 !important; border-color:#a9c4d4 !important; font-weight:600; font-size:.95rem; }
+.stApp:has(.et-landing) [data-testid="stButton"] button:hover { background:#cacdd1 !important; color:#0f1011 !important; }
+</style><div class="et-landing"></div>"""
 if not st.session_state.entered_engine_twin:
-    st.markdown(showroom_landing(ROOT / "assets" / "engine-showroom-hero.png"), unsafe_allow_html=True)
-    if st.button("Enter live twin", key="enter_engine_twin"):
+    st.markdown(LANDING_CSS, unsafe_allow_html=True)
+    st.iframe(landing_html(), height=800)
+    if st.button("Enter live twin  →", key="enter_engine_twin"):
         st.session_state.entered_engine_twin = True
         st.rerun()
     st.stop()
@@ -130,129 +156,58 @@ def trip_replay(name, fault, severity, loss_rates):
     return table
 
 
+@st.cache_data(show_spinner="Simulating the seven engine states")
+def engine_map_payload(rpm, load, severity, snr_db, seed, demo):
+    """Runs the existing simulator, feature extractor and diagnoser once per fault label; display data only."""
+    return build_payload(lambda window: diagnoser().diagnose(window), rpm, load, severity, snr_db, seed, demo)
+
+
 def summarise(table):
     litres = lambda col: float((table[col] * table["time_s"].diff().fillna(1.0)).sum() / 3600)
     actual, optimised = litres("actual_fuel_l_h"), litres("opt_fuel_l_h")
     return actual, optimised
 
 
-SECTIONS = ["Live engine", "Sensor fusion", "Engine insights", "Real data lab", "Validation"]
+SECTIONS = ["Live engine", "Engine map", "Signatures", "Diagnosis", "Sweet spot", "Health", "Data explorer", "Real recording", "Results", "Measured guard", "Synthetic engine"]
 # Keep page-specific inputs when their widgets are temporarily off screen.
 for input_key in list(st.session_state):
     if input_key in {"guard_enabled", "triggered_failure", "health_day", "heat_fault", "confusion", "liu_scenario", "liu_cursor"} or input_key.startswith("manual_bias_"):
         st.session_state[input_key] = st.session_state[input_key]
 
-st.markdown("""
-<style>
-[data-testid="stSidebar"] { min-width:290px; max-width:290px; }
-[data-testid="stSidebarContent"] { padding:1.15rem 1rem .8rem; }
-[data-testid="stSidebar"] h1 { font-size:1.42rem; margin:0 0 .1rem; }
-[data-testid="stSidebar"] [role="radiogroup"] { gap:.18rem; }
-[data-testid="stSidebar"] [role="radiogroup"] label {
-  padding:.46rem .55rem; border-radius:7px; border:1px solid transparent;
-}
-[data-testid="stSidebar"] [role="radiogroup"] label:has(input:checked) {
-  background:#24251f; border-color:#59513a;
-}
-.et-side-kicker { color:#d8b453; font-size:.68rem; letter-spacing:.1em; text-transform:uppercase; margin-top:.85rem; }
-.et-side-note { color:#9e9e96; font-size:.76rem; line-height:1.35; margin:.18rem 0 .5rem; }
-.et-demo { max-width:100%; overflow:visible!important; white-space:normal!important; }
-.et-demo span { display:block; overflow:visible!important; white-space:normal!important; }
-@media(max-height:760px) {
-  [data-testid="stSidebarContent"] { padding-top:.65rem; }
-  [data-testid="stSidebar"] [role="radiogroup"] label { padding:.3rem .45rem; }
-}
-</style>
-""", unsafe_allow_html=True)
-
 with st.sidebar:
-    st.title("EngineTwin")
-    st.caption("Multisensor fault intelligence")
-    st.markdown('<div class="et-side-kicker">Workspace</div>', unsafe_allow_html=True)
-    workspace = st.radio("Workspace", SECTIONS, key="workspace_section", label_visibility="collapsed")
-    section = workspace
+    st.markdown(brand_block(), unsafe_allow_html=True)
+    section = st.radio("Workspace", SECTIONS, key="workspace_section")
     st.divider()
 
 # ---------------------------------------------------------------- sidebar: controls
-if workspace == "Live engine":
-    with st.sidebar:
-        st.markdown('<div class="et-side-kicker">Fault injection</div>', unsafe_allow_html=True)
-        st.markdown('<div class="et-side-note">Choose one measured benchmark fault and inject it into the running replay.</div>', unsafe_allow_html=True)
-        live_fault = st.selectbox(
-            "Fault type",
-            list(LIU_SCENARIOS),
-            format_func=lambda key: f"{LIU_SCENARIOS[key]['name']} · {LIU_SCENARIOS[key]['code']}",
-            key="sidebar_live_fault",
-        )
-        inject_col, clear_col = st.columns(2)
-        if inject_col.button("Inject", key="sidebar_inject", type="primary", use_container_width=True):
-            st.session_state.guard_model_version = "manual-all-sensors-v1"
-            st.session_state.scenario_id = live_fault
-            st.session_state.triggered_failure = True
-            st.session_state.triggered_event = None
-            st.session_state.manual_event = None
-            st.session_state.guard_tripped = False
-            st.session_state.engine_failed = False
-            st.session_state.sim_running = True
-        if clear_col.button("Clear", key="sidebar_clear", use_container_width=True):
-            st.session_state.triggered_failure = False
-            st.session_state.triggered_event = None
-            st.session_state.manual_event = None
-            st.session_state.guard_tripped = False
-            st.session_state.engine_failed = False
+if DEMO_MODE:
+    st.sidebar.caption("Demo data: the synthetic sections use demo models until trained cache artifacts exist. Live engine and Measured guard use the supplied LiU-ICE replay.")
 
-if workspace == "Engine insights":
-    with st.sidebar:
-        st.markdown('<div class="et-side-kicker">Analysis</div>', unsafe_allow_html=True)
-        section = st.radio("Analysis", ["Sweet spot", "Health"], key="insight_section", label_visibility="collapsed")
-        if section == "Sweet spot":
-            drive_mode = st.selectbox("Driving condition", list(dash.DRIVE_MODES), index=1, key="drive_mode")
-
-if workspace == "Validation":
-    with st.sidebar:
-        st.markdown('<div class="et-side-kicker">Evidence</div>', unsafe_allow_html=True)
-        section = st.radio("Evidence", ["Results", "Data explorer"], key="validation_section", label_visibility="collapsed")
-
-if workspace == "Real data lab":
-    section = "Real recording"
-
-if workspace == "Sensor fusion":
-    with st.sidebar:
-        st.markdown('<div class="et-side-kicker">Simulation</div>', unsafe_allow_html=True)
-        st.markdown('<div class="et-side-note">A controlled fault lets you see every signal change before the diagnosis changes.</div>', unsafe_allow_html=True)
-        injected = st.selectbox("Inject a fault", FAULTS, key="fault", format_func=lambda value: value.replace("+", " + ").replace("_", " ").title())
-        severity = st.slider("Fault severity", 0.0, 1.0, 0.8, 0.05, key="severity", disabled=injected == "healthy")
-        snr_db = int(st.session_state.get("snr", 20))
-else:
-    injected = st.session_state.get("fault", "healthy")
-    severity = float(st.session_state.get("severity", 0.8))
-    snr_db = int(st.session_state.get("snr", 20))
-
-drive_mode = st.session_state.get("drive_mode", list(dash.DRIVE_MODES)[1])
-seed = int(st.session_state.get("seed", 7))
-loss_rates = {
-    "misfire": float(st.session_state.get("loss_misfire", int(DEFAULT_LOSS_PER_SEVERITY["misfire"] * 100))) / 100,
-    "knock": float(st.session_state.get("loss_knock", int(DEFAULT_LOSS_PER_SEVERITY["knock"] * 100))) / 100,
-    "valve_wear": float(st.session_state.get("loss_valve", int(DEFAULT_LOSS_PER_SEVERITY["valve_wear"] * 100))) / 100,
-}
-trip_name = st.session_state.get("trip", "Synthetic urban trip" if DEMO_MODE else "Ocslab trip H-0 (held-out driver)")
+with st.sidebar.expander("Simulation settings", expanded=False):
+    st.caption("Controls for synthetic analysis and trip replay.")
+    drive_mode = st.selectbox("Drive mode", list(dash.DRIVE_MODES), index=1, key="drive_mode")
+    injected = st.selectbox("Inject a fault", FAULTS, key="fault", help="The simulated engine develops this fault 3 s into the stream.")
+    severity = st.slider("Fault severity", 0.0, 1.0, 0.8, 0.05, key="severity", disabled=injected == "healthy")
+    snr_db = st.slider("Noise level (signal-to-noise, dB)", 0, 30, 20, key="snr", help="Lower is noisier. Models were trained on 10 to 25 dB.")
+    seed = st.number_input("Random seed", 0, 9999, 7, key="seed")
+    st.subheader("Fault loss assumptions")
+    st.caption("Share of efficiency each fault removes at full severity. These are assumptions, not measurements.")
+    loss_rates = {
+        "misfire": st.slider("Misfire loss (%)", 0, 60, int(DEFAULT_LOSS_PER_SEVERITY["misfire"] * 100), key="loss_misfire") / 100,
+        "knock": st.slider("Knock loss (%)", 0, 60, int(DEFAULT_LOSS_PER_SEVERITY["knock"] * 100), key="loss_knock") / 100,
+        "valve_wear": st.slider("Valve wear loss (%)", 0, 60, int(DEFAULT_LOSS_PER_SEVERITY["valve_wear"] * 100), key="loss_valve") / 100,
+    }
+    trip_options = (["Synthetic urban trip", "Synthetic highway trip"] if DEMO_MODE else
+                    ["Ocslab trip H-0 (held-out driver)", "VED trip 488-438 (held-out car)"])
+    trip_name = st.selectbox("Replay scenario" if DEMO_MODE else "Replay a real trip", trip_options, key="trip")
 
 mode = dash.drive_mode_point(drive_mode)
 sev = 0.0 if injected == "healthy" else float(severity)
 params = (injected, sev, mode["rpm"], mode["load"], float(snr_db), int(seed))
 stream = make_stream(*params)
 
-st.markdown(hero(), unsafe_allow_html=True)
-if DEMO_MODE and workspace in {"Sensor fusion", "Engine insights"}:
-    st.markdown(
-        '<div class="et-demo"><b>SIMULATION LAB</b><span>Sound and vibration are controlled signals for explaining the pipeline. Measured validation is kept separately in Real data lab and Validation.</span></div>',
-        unsafe_allow_html=True,
-    )
 steps = [round(WINDOW_S + 0.5 * k, 1) for k in range(int((STREAM_SECONDS - WINDOW_S) / 0.5) + 1)]
-if workspace == "Sensor fusion":
-    end_s = st.select_slider("Playback position", options=steps, value=5.0, key="position", format_func=lambda value: f"{value:.1f} s")
-else:
-    end_s = float(st.session_state.get("position", 5.0))
+end_s = st.sidebar.select_slider("Playback position (s)", options=steps, value=5.0, key="position")
 result = diagnose_at(*params, end_s)
 window = stream.window(end_s, WINDOW_S)
 rpm_now = refine_rpm(window.sound, window.sound_fs, window.obd["engine_speed"])
@@ -265,20 +220,30 @@ def status_banner(res):
         st.error(f"Fault: {res.label.replace('+', ' and ').replace('_', ' ')} (confidence {res.confidence:.0%})")
 
 
+# ---------------------------------------------------------------- Engine map
+if section == "Engine map":
+    st.markdown('<div class="et-kicker">Engine map</div>', unsafe_allow_html=True)
+    st.subheader("Which sensor sees which fault")
+    st.caption("Pick a fault to see the parts it acts on, how each sensor reading changes, and how those changes become the diagnosis. "
+               "The operating point follows the drive mode in Simulation settings.")
+    slider_col, _spacer = st.columns([1, 2])
+    with slider_col:
+        map_severity = st.slider("Fault severity for this view", 0.2, 1.0, float(severity) if severity else 0.8, 0.05, key="map_severity")
+    payload = engine_map_payload(float(mode["rpm"]), float(mode["load"]), float(map_severity), float(snr_db), int(seed), DEMO_MODE)
+    st.iframe(engine_map_html(payload), height="content")
+
 # ---------------------------------------------------------------- Live engine
 if section == "Live engine":
     render_live()
 
 if section == "Synthetic engine":
-    st.markdown(toolbar(drive_mode, end_s, result.label, int(snr_db)), unsafe_allow_html=True)
-    st.markdown(scroll_engine_simulation(result.label, rpm_now, window.obd["calculated_load_value"]), unsafe_allow_html=True)
     trim = window.obd["short_term_fuel_trim_bank1"] + window.obd["long_term_fuel_trim_bank1"]
     kpis = st.columns(4)
     kpi_data = (
-        ("Engine speed", f"{rpm_now:,.0f}", "RPM", "Crankshaft angular velocity", "#d8aa32"),
-        ("Calculated load", f"{window.obd['calculated_load_value']:.1f}", "%", "Combustion demand", "#b78d2c"),
-        ("Coolant temperature", f"{window.obd['engine_coolant_temperature']:.1f}", "°C", "Thermal operating state", "#f6b93b"),
-        ("AI guard state", result.status.upper(), "", f"{result.confidence:.0%} confidence", "#e6bc55" if result.status == "Healthy" else "#d78b80"),
+        ("Engine speed", f"{rpm_now:,.0f}", "RPM", "Crankshaft angular velocity", "#a9c4d4"),
+        ("Calculated load", f"{window.obd['calculated_load_value']:.1f}", "%", "Combustion demand", "#a9c4d4"),
+        ("Coolant temperature", f"{window.obd['engine_coolant_temperature']:.1f}", "°C", "Thermal operating state", "#d49a6a"),
+        ("AI guard state", result.status.upper(), "", f"{result.confidence:.0%} confidence", "#a9c4d4" if result.status == "Healthy" else "#d78b80"),
     )
     for column, data in zip(kpis, kpi_data):
         column.markdown(metric_card(*data), unsafe_allow_html=True)
@@ -292,115 +257,55 @@ if section == "Synthetic engine":
     norm = lambda values, offset: offset + 12 * values / (np.std(values) + 1e-9)
 
     trace_fig = go.Figure()
-    trace_fig.add_trace(go.Scatter(x=chart_t, y=norm(sound_trace, 68), name="Acoustic", line={"color": "#d8b453", "width": 1.6}))
-    trace_fig.add_trace(go.Scatter(x=chart_t, y=norm(vibration_trace, 38), name="Vibration", line={"color": "#9ba9ba", "width": 1.5}))
+    trace_fig.add_trace(go.Scatter(x=chart_t, y=norm(sound_trace, 68), name="Acoustic", line={"color": "#a9c4d4", "width": 1.6}))
+    trace_fig.add_trace(go.Scatter(x=chart_t, y=norm(vibration_trace, 38), name="Vibration", line={"color": "#a5aab0", "width": 1.5}))
     trace_fig.add_trace(go.Scatter(x=chart_t, y=np.full_like(chart_t, window.obd["calculated_load_value"]), name="Engine load", line={"color": "#a1b3a2", "width": 1.4}))
     if result.status != "Healthy":
         trace_fig.add_trace(go.Scatter(x=chart_t, y=np.full_like(chart_t, 8), name="Fault evidence", line={"color": "#d78b80", "width": 2, "dash": "dash"}))
     trace_fig.update_layout(
-        title={"text": "SYNCHRONIZED SENSOR STREAMS & FAULT EVIDENCE", "font": {"size": 13, "family": "Arial"}},
-        paper_bgcolor="rgba(7,23,34,.75)", plot_bgcolor="#151614", font={"color": "#b3b3aa", "family": "Arial"},
+        title={"text": "SYNCHRONIZED SENSOR STREAMS & FAULT EVIDENCE", "font": {"size": 13, "family": "Helvetica Neue, Helvetica, Arial"}},
+        paper_bgcolor="rgba(19,20,22,.75)", plot_bgcolor="#101214", font={"color": "#9aa0a6", "family": "Helvetica Neue, Helvetica, Arial"},
         height=388, margin={"l": 35, "r": 18, "t": 54, "b": 36}, legend={"orientation": "h", "y": 1.12, "x": .46},
-        xaxis={"title": "Replay time · seconds", "gridcolor": "#30312d"}, yaxis={"title": "normalized signal", "gridcolor": "#30312d", "range": [0, 100]},
+        xaxis={"title": "Replay time · seconds", "gridcolor": "#26292d"}, yaxis={"title": "normalized signal", "gridcolor": "#26292d", "range": [0, 100]},
     )
     left, right = st.columns([1.72, 1.0], gap="small")
     with left:
         st.plotly_chart(trace_fig, width="stretch", config={"displayModeBar": False})
+        # Engine speed, load, coolant and playback already appear in the cards above and the sidebar.
         readings = (
-            ("Engine speed", f"{rpm_now:,.0f}", "RPM", "STREAMING", "#d8aa32"),
-            ("Air mass flow", f"{window.obd['maf']:.2f}", "g/s", "NOMINAL", "#d8aa32"),
-            ("Timing advance", f"{window.obd['timing_advance']:.1f}", "deg", "STREAMING", "#d8aa32"),
-            ("Fuel trim", f"{trim:+.1f}", "%", "WATCH" if abs(trim) > 8 else "NOMINAL", "#f6b93b"),
-            ("Noise floor", f"{snr_db}", "dB", "SYNCHRONIZED", "#d8aa32"),
-            ("Throttle proxy", f"{window.obd['calculated_load_value']:.1f}", "%", "STREAMING", "#d8aa32"),
-            ("Coolant", f"{window.obd['engine_coolant_temperature']:.1f}", "°C", "NOMINAL", "#d8aa32"),
-            ("Fault evidence", f"{max(result.probabilities.values()):.0%}", "", result.label.upper(), "#d78b80" if result.status != "Healthy" else "#d8aa32"),
-            ("Engine load", f"{window.obd['calculated_load_value']:.1f}", "%", "STREAMING", "#d8aa32"),
-            ("Playback", f"{end_s:.1f}", "s", "ACTIVE", "#d8aa32"),
+            ("Air mass flow", f"{window.obd['maf']:.2f}", "g/s", "NOMINAL", "#a9c4d4"),
+            ("Timing advance", f"{window.obd['timing_advance']:.1f}", "deg", "STREAMING", "#a9c4d4"),
+            ("Fuel trim", f"{trim:+.1f}", "%", "WATCH" if abs(trim) > 8 else "NOMINAL", "#d49a6a"),
+            ("Noise floor", f"{snr_db}", "dB", "SYNCHRONIZED", "#a9c4d4"),
+            ("Fault evidence", f"{max(result.probabilities.values()):.0%}", "", result.label.upper(), "#d78b80" if result.status != "Healthy" else "#a9c4d4"),
         )
         st.markdown(sensor_grid(readings), unsafe_allow_html=True)
     with right:
-        st.markdown(engine_panel(result.label, float(np.mean(list(result.severities.values()))) if result.severities else 0.0,
-                                 rpm_now, window.obd["calculated_load_value"]), unsafe_allow_html=True)
+        st.iframe(engine_viewer_html(result.label, float(np.mean(list(result.severities.values()))) if result.severities else 0.0,
+                                           rpm_now, window.obd["calculated_load_value"]), height=420)
         st.markdown(event_log(result.label, result.confidence, end_s), unsafe_allow_html=True)
     if not has_obd(window):
         st.warning("No OBD readings.")
 
-# ---------------------------------------------------------------- Sensor fusion story
-if section == "Sensor fusion":
-    st.subheader("How the sensors become a diagnosis")
-    st.caption("The selected fault enters at 3.0 s. Move the playback control to watch raw sound, vibration and ECU telemetry turn into signatures, evidence and a decision.")
-
-    healthy_window = make_stream("healthy", 0.0, mode["rpm"], mode["load"], float(snr_db), int(seed)).window(end_s, WINDOW_S)
-    trim_now = window.obd["short_term_fuel_trim_bank1"] + window.obd["long_term_fuel_trim_bank1"]
-    trim_base = healthy_window.obd["short_term_fuel_trim_bank1"] + healthy_window.obd["long_term_fuel_trim_bank1"]
-    fusion_metrics = [
-        ("Acoustic energy", float(np.sqrt(np.mean(window.sound ** 2))), float(np.sqrt(np.mean(healthy_window.sound ** 2))), "microphone"),
-        ("Vibration energy", float(np.sqrt(np.mean(window.vibration ** 2))), float(np.sqrt(np.mean(healthy_window.vibration ** 2))), "accelerometer"),
-        ("Half-order rhythm", float(half_order_ratio(window.sound, window.sound_fs, rpm_now)), float(half_order_ratio(healthy_window.sound, healthy_window.sound_fs, mode["rpm"])), "misfire signature"),
-        ("Knock-band energy", float(band_energy_fraction(window.sound, window.sound_fs, 5500, 7500)), float(band_energy_fraction(healthy_window.sound, healthy_window.sound_fs, 5500, 7500)), "combustion signature"),
-        ("Valve-band energy", float(band_energy_fraction(window.vibration, window.vibration_fs, 2500, 3500)), float(band_energy_fraction(healthy_window.vibration, healthy_window.vibration_fs, 2500, 3500)), "valvetrain signature"),
-        ("Fuel-trim shift", float(trim_now), float(trim_base), "ECU response"),
-    ]
-    deltas = [float(np.clip((current - baseline) / (abs(baseline) + 1e-6), -4, 4)) for _, current, baseline, _ in fusion_metrics]
-    strongest = sorted(zip(fusion_metrics, deltas), key=lambda item: abs(item[1]), reverse=True)[:3]
-
-    flow = go.Figure(go.Sankey(
-        arrangement="fixed",
-        node={
-            "label": ["Microphone", "Accelerometer", "ECU / OBD", "Frequency signatures", "Combustion rhythm", "Telemetry shifts", "Multimodal model", result.label.replace("+", " + ").replace("_", " ").title()],
-            "x": [0.02, 0.02, 0.02, 0.34, 0.34, 0.34, 0.68, 0.96],
-            "y": [0.08, 0.45, 0.82, 0.14, 0.5, 0.82, 0.48, 0.48],
-            "color": ["#d8b453", "#9ba9ba", "#a1b3a2", "#52472d", "#52472d", "#3c4941", "#d8b453", "#d78b80" if result.status != "Healthy" else "#a1b3a2"],
-            "pad": 18,
-            "thickness": 18,
-        },
-        link={
-            "source": [0, 0, 1, 1, 2, 3, 4, 5, 6],
-            "target": [3, 4, 3, 4, 5, 6, 6, 6, 7],
-            "value": [2.1, 1.5, 1.8, 1.4, 2.2, 2.0, 1.8, 2.2, 5.8],
-            "color": ["rgba(216,180,83,.24)", "rgba(216,180,83,.18)", "rgba(155,169,186,.22)", "rgba(155,169,186,.18)", "rgba(161,179,162,.22)", "rgba(216,180,83,.20)", "rgba(216,180,83,.20)", "rgba(161,179,162,.20)", "rgba(215,139,128,.30)" if result.status != "Healthy" else "rgba(161,179,162,.30)"],
-        },
-    ))
-    flow.update_layout(
-        height=330, margin={"l": 8, "r": 8, "t": 12, "b": 8},
-        paper_bgcolor="#151614", plot_bgcolor="#151614", font={"color": "#f5f4ef", "size": 12},
-    )
-    st.plotly_chart(flow, width="stretch", config={"displayModeBar": False})
-
-    stage_cols = st.columns([1.1, 1.1, 1.1, 1.25])
-    source_cards = (
-        ("01 · SENSE", "3 modalities", "sound · vibration · ECU"),
-        ("02 · EXTRACT", "6 live signatures", strongest[0][0][0]),
-        ("03 · FUSE", f"{max(result.probabilities.values()):.0%} evidence", "CNN + explainable features"),
-        ("04 · DECIDE", result.status.upper(), result.label.replace("+", " + ").replace("_", " ")),
-    )
-    for column, (label, value, note) in zip(stage_cols, source_cards):
-        column.markdown(metric_card(label, value, "", note, "#d78b80" if result.status != "Healthy" and label.startswith("04") else "#d8b453"), unsafe_allow_html=True)
-
-    left, right = st.columns([1.35, 1], gap="medium")
-    with left:
-        comparison = go.Figure()
-        labels = [item[0] for item in fusion_metrics]
-        comparison.add_trace(go.Bar(y=labels, x=deltas, orientation="h", marker_color=["#d78b80" if value > .2 else "#9ba9ba" if value < -.2 else "#a1b3a2" for value in deltas], hovertemplate="%{y}<br>%{x:+.1f}× vs healthy<extra></extra>"))
-        comparison.add_vline(x=0, line_color="#77776f")
-        comparison.update_layout(title="CHANGE FROM THE MATCHED HEALTHY BASELINE", height=355, margin={"l": 15, "r": 15, "t": 48, "b": 35}, paper_bgcolor="#151614", plot_bgcolor="#151614", font={"color": "#b4b3aa"}, xaxis={"title": "relative change · capped at ±4×", "gridcolor": "#30312d"}, yaxis={"autorange": "reversed", "gridcolor": "#30312d"}, showlegend=False)
-        st.plotly_chart(comparison, width="stretch", config={"displayModeBar": False})
-    with right:
-        status_banner(result)
-        st.markdown("**What moved the decision**")
-        for (name, _, _, meaning), delta in strongest:
-            direction = "rose" if delta >= 0 else "fell"
-            st.markdown(f"- **{name}** {direction} by {abs(delta):.1f}× relative to the matched healthy window ({meaning}).")
-        for sentence in result.reasons[:2]:
-            st.markdown(f"- {sentence}")
-        st.plotly_chart(dash.probability_figure(result.probabilities, "simulated"), width="stretch", config={"displayModeBar": False})
-
-    with st.expander("Inspect the frequency-domain evidence"):
-        spec = window_spectrogram(window)
-        spectra = st.columns(2)
-        spectra[0].plotly_chart(dash.spectrogram_figure(spec[0], WINDOW_S, "Sound", "simulated"), width="stretch")
-        spectra[1].plotly_chart(dash.spectrogram_figure(spec[1], WINDOW_S, "Vibration", "simulated"), width="stretch")
+# ---------------------------------------------------------------- Signatures
+if section == "Signatures":
+    st.subheader("Signatures")
+    spec = window_spectrogram(window)
+    compact = lambda fig: fig.update_layout(height=300, margin={"l": 44, "r": 16, "t": 48, "b": 40})
+    col_a, col_b, col_c = st.columns(3)
+    col_a.plotly_chart(compact(dash.spectrogram_figure(spec[0], WINDOW_S, "Sound", "simulated")), width="stretch")
+    col_b.plotly_chart(compact(dash.spectrogram_figure(spec[1], WINDOW_S, "Vibration", "simulated")), width="stretch")
+    orders, amps = order_spectrum(window.sound, window.sound_fs, rpm_now, max_order=8.0)
+    col_c.plotly_chart(compact(dash.order_spectrum_figure(orders, amps, "simulated")), width="stretch")
+    env_f, env_a = envelope_spectrum(window.vibration, window.vibration_fs, band=(2500, 3500))
+    keep = env_f <= 300
+    col_a.plotly_chart(compact(dash.envelope_figure(env_f[keep], env_a[keep], rpm_now, "simulated")), width="stretch")
+    n_samples = int(12 * 30.0 / rpm_now * window.vibration_fs)
+    energy = per_cylinder_energy(window.vibration[:n_samples], window.vibration_fs, rpm_now)
+    col_b.plotly_chart(compact(dash.cylinder_figure(energy, "simulated")), width="stretch")
+    col_c.info("A misfire adds a line at order 0.5 and leaves one cylinder with little firing energy. Knock adds short bursts near "
+               "6.5 kHz after each firing. A worn valve ticks near 3 kHz once per two revolutions. These signatures are assumptions, "
+               "not measured from real faults.")
 
 # ---------------------------------------------------------------- Diagnosis
 if section == "Diagnosis":
@@ -452,28 +357,32 @@ if section == "Sweet spot":
         st.warning(f"With the diagnosed {fault_label.replace('+', ' and ').replace('_', ' ')} (severity {fault_severity:.0%}) the engine loses "
                    f"{rec['fault_loss_fraction']:.0%} of its efficiency ({rec['efficiency_lost_to_fault'] * 100:.1f} points), burning "
                    f"{rec['fault_extra_fuel_l_per_h']:.2f} L/h more than a healthy one. These loss rates are assumptions you can change in the sidebar.")
-    map_source = "simulated" if DEMO_MODE else "real"
-    st.plotly_chart(dash.efficiency_map_figure(cells, (rec["actual"]["rpm"], rec["actual"]["torque_nm"]), (rec["rpm"], rec["torque_nm"]), map_source), width="stretch")
-    if DEMO_MODE:
-        st.caption("Demo efficiency surface: the current point is white and the recommended point is gold. Replace demo mode with trained artifacts before reporting these values.")
-    else:
-        st.caption("The map is measured Ocslab data (Kia Soul, 10 drivers). The points are where the engine runs now (white) and where the optimiser would run it (gold) "
-                   "for the same power, using an efficiency model learned from Ocslab. The Ocslab fuel unit is inferred as microlitres per second, "
-                   "and absolute efficiencies are about half of EPA's. Read the shape and gains rather than the absolute level.")
-    st.markdown("**Scenario replay: actual against optimised**" if DEMO_MODE else "**Replay of a real trip: actual against optimised**")
-    table = trip_replay(trip_name, injected if injected != "healthy" else "healthy", sev, tuple(loss_rates.items()))
-    actual_l, optimised_l = summarise(table)
-    cols = st.columns(3)
-    cols[0].metric("Fuel actually used", f"{actual_l:.3f} L")
-    cols[1].metric("Fuel with optimised gears", f"{optimised_l:.3f} L")
-    cols[2].metric("Saved", f"{actual_l - optimised_l:.3f} L", f"Rs {(actual_l - optimised_l) * 105:.1f}")
-    st.plotly_chart(dash.series_figure(table, "mixed"), width="stretch")
-    if DEMO_MODE:
-        st.caption("Simulated scenario: both series are generated for interface testing. The values are illustrative, not measured savings.")
-    else:
-        st.caption("Mixed: speed, rpm and fuel are recorded values; the optimised series is modelled. "
-                   + ("The VED trip has no torque. Its power comes from a vehicle model and the efficiency model did not validate on VED. Treat that saving as an illustration."
-                      if trip_name.startswith("VED") else "The saving on this held-out Ocslab trip is small: the car's automatic already picks gears close to what the model prefers."))
+    tab_map, tab_replay = st.tabs(["Efficiency map", "Trip replay"])
+    with tab_map:
+        map_source = "simulated" if DEMO_MODE else "real"
+        st.plotly_chart(dash.efficiency_map_figure(cells, (rec["actual"]["rpm"], rec["actual"]["torque_nm"]), (rec["rpm"], rec["torque_nm"]), map_source).update_layout(height=440), width="stretch")
+        if DEMO_MODE:
+            st.caption("Demo efficiency surface: the current point is white and the recommended point is gold. Replace demo mode with trained artifacts before reporting these values.")
+        else:
+            st.caption("The map is measured Ocslab data (Kia Soul, 10 drivers). The points are where the engine runs now (white) and where the optimiser would run it (gold) "
+                       "for the same power, using an efficiency model learned from Ocslab. The Ocslab fuel unit is inferred as microlitres per second, "
+                       "and absolute efficiencies are about half of EPA's, so read the shape and the gains rather than the absolute level.")
+    with tab_replay:
+        st.markdown("**Scenario replay: actual against optimised**" if DEMO_MODE else "**Replay of a real trip: actual against optimised**")
+        table = trip_replay(trip_name, injected if injected != "healthy" else "healthy", sev, tuple(loss_rates.items()))
+        actual_l, optimised_l = summarise(table)
+        cols = st.columns(3)
+        cols[0].metric("Fuel actually used", f"{actual_l:.3f} L")
+        cols[1].metric("Fuel with optimised gears", f"{optimised_l:.3f} L")
+        cols[2].metric("Saved", f"{actual_l - optimised_l:.3f} L", f"Rs {(actual_l - optimised_l) * 105:.1f}")
+        st.plotly_chart(dash.series_figure(table, "mixed").update_layout(height=520), width="stretch")
+        if DEMO_MODE:
+            st.caption("Simulated scenario: both series are generated for interface testing. The values are illustrative, not measured savings.")
+        else:
+            st.caption("Mixed: speed, rpm and fuel are recorded values; the optimised series is modelled. "
+                       + ("The VED trip has no torque, so its power comes from a vehicle model and the efficiency model did not validate on VED: treat that saving as an illustration."
+                          if trip_name.startswith("VED") else "The saving on this held-out Ocslab trip is small: the car's automatic already picks gears close to what the model prefers."))
+
 
 # ---------------------------------------------------------------- Health
 if section == "Health":
@@ -503,7 +412,7 @@ if section == "Health":
             st.caption("Demo wear curve for interface testing. It is synthetic and is not a trained service-life prediction.")
         else:
             st.caption("A simulated valve wears from new to fully worn over 60 days (the wear curve is an assumption). Health is estimated from the vibration "
-                       f"alone (error {health['wear_regressor_mae_test_same']:.3f} in severity). The forecast extends the last 14 days in a straight line. "
+                       f"alone (error {health['wear_regressor_mae_test_same']:.3f} in severity). The forecast extends the last 14 days in a straight line, so "
                        "it is early or late while wear accelerates: it only becomes accurate in the last third.")
     else:
         st.info("Run scripts/train_health_and_autoencoder.py to build the health series.")
@@ -519,82 +428,12 @@ if section == "Data explorer":
 
 # ---------------------------------------------------------------- Real recording
 if section == "Real recording":
-    st.subheader("Real data lab")
-    st.caption("A working replay from a public combustion-engine test bench, followed by an optional recording inspector.")
-    if LIU_GUARD_BUNDLE.exists():
-        dataset_left, dataset_right = st.columns([1.35, 1])
-        with dataset_left:
-            real_scenario = st.selectbox(
-                "Measured fault run",
-                list(LIU_SCENARIOS),
-                format_func=lambda key: f"{LIU_SCENARIOS[key]['name']} · {LIU_SCENARIOS[key]['code']}",
-                key="real_scenario",
-            )
-        replay = build_guard_replay(measured_guard_bundle(), real_scenario)
-        with dataset_right:
-            real_cursor = st.slider("Replay position", 0, len(replay.frame) - 1, min(30, len(replay.frame) - 1), key="real_cursor")
-        row = replay.frame.iloc[real_cursor]
-        detector = {"Intercooler_pressure": "f_pic", "intake_manifold_pressure": "f_pim", "air_mass_flow": "f_waf"}[replay.scenario["fault_sensor"]]
-        confirmed = bool(replay.confirmed.iloc[real_cursor][detector])
-        evidence_now = float(replay.evidence.iloc[real_cursor][detector])
-        health_now = float(replay.health.iloc[real_cursor])
-        elapsed = float(row["window_end_s"])
-        measured_rpm = float(row["engine_speed__mean"] * 60 / (2 * np.pi))
-        measured_cards = st.columns(4)
-        for column, card in zip(measured_cards, (
-            ("Bench time", f"{elapsed:.0f}", "s", "five-second measured windows", "#d8aa32"),
-            ("Engine speed", f"{measured_rpm:,.0f}", "RPM", "measured crank speed", "#d8aa32"),
-            ("Fault evidence", f"{evidence_now:.2f}", "×", "confirmation limit 1.25×", "#d78b80" if confirmed else "#d8aa32"),
-            ("Decision", "FAULT" if confirmed else "MONITOR", "", replay.scenario["code"], "#d78b80" if confirmed else "#a1b3a2"),
-        )):
-            column.markdown(metric_card(*card), unsafe_allow_html=True)
-
-        pre_fault = replay.frame.loc[replay.frame["window_end_s"] < replay.injection_time]
-        channel_map = {
-            "Manifold pressure": "intake_manifold_pressure__mean",
-            "Intercooler pressure": "Intercooler_pressure__mean",
-            "Air mass flow": "air_mass_flow__mean",
-            "Engine speed": "engine_speed__mean",
-            "Fuel mass": "injected_fuel_mass__mean",
-            "Throttle": "throttle_position__mean",
-        }
-        convergence = go.Figure()
-        colours = ["#d8b453", "#9ba9ba", "#a1b3a2", "#c7b796", "#d78b80", "#7f8c8d"]
-        shown = replay.frame.iloc[: real_cursor + 1]
-        for (label, column), colour in zip(channel_map.items(), colours):
-            baseline = float(pre_fault[column].median())
-            relative = 100 * (shown[column] - baseline) / (abs(baseline) + 1e-9)
-            convergence.add_trace(go.Scatter(x=shown["window_end_s"], y=relative, name=label, line={"width": 2, "color": colour}))
-        convergence.add_vline(x=replay.injection_time, line_color="#d78b80", line_dash="dash", annotation_text="fault begins")
-        convergence.update_layout(
-            title="HOW ONE FAULT PROPAGATES ACROSS SIX MEASURED CHANNELS",
-            height=440, margin={"l": 35, "r": 18, "t": 58, "b": 105},
-            paper_bgcolor="#151614", plot_bgcolor="#151614", font={"color": "#b4b3aa"},
-            legend={"orientation": "h", "y": -.34, "x": 0}, xaxis={"title": "test-bench time · seconds", "gridcolor": "#30312d"},
-            yaxis={"title": "change from pre-fault median · %", "gridcolor": "#30312d"},
-        )
-        chart_col, decision_col = st.columns([1.65, 1], gap="medium")
-        chart_col.plotly_chart(convergence, width="stretch", config={"displayModeBar": False})
-        with decision_col:
-            st.markdown("**Measured → expected → residual → decision**")
-            st.markdown(f"The healthy consistency model predicts **{replay.scenario['name'].lower()}** from the other channels. Its residual is now **{evidence_now:.2f}×** the learned healthy limit.")
-            st.progress(min(evidence_now / 1.25, 1.0), text="Evidence toward confirmation")
-            st.metric("Residual-derived health", f"{health_now:.0f} / 100")
-            if confirmed:
-                st.error("Fault confirmed: two of the last three windows crossed the limit and the current window exceeded 1.25×.")
-            elif elapsed < replay.injection_time:
-                st.success("Healthy baseline: all channels remain mutually consistent.")
-            else:
-                st.warning("Fault has started; the guard is collecting consecutive evidence before confirmation.")
-        st.markdown(
-            "Source: [LiU-ICE Industrial Fault Diagnosis Benchmark](https://vehsys.gitlab-pages.liu.se/dx_safeprocess_benchmarks/liuice/), real internal-combustion-engine test-bench data with nominal and faulty operation."
-        )
+    st.subheader("Real recording")
+    if DEMO_MODE:
+        st.info("Demo mode can visualise an uploaded WAV, but it does not classify real recordings. Build the trained artifacts for the experimental pipeline.")
     else:
-        st.info("The prepared LiU‑ICE benchmark bundle is not available in this installation.")
-
-    st.divider()
-    st.markdown("### Inspect your own engine recording")
-    st.caption("Upload a WAV to inspect its spectrum and run the experimental acoustic pipeline. This is not a field diagnosis: the current acoustic fault labels were learned from controlled synthetic signatures.")
+        st.warning("The fault models were trained on simulated faults only. A real recording may sound different from anything they have seen, "
+                   "so treat the result as a demonstration of the pipeline, not a diagnosis.")
     def remember_upload(key):
         st.session_state[f"saved_{key}"] = st.session_state[key]
 
@@ -684,24 +523,19 @@ if section == "Measured guard":
         measured_rpm = float(row["engine_speed__mean"] * 60 / (2 * np.pi))
         measured_load = float(np.clip(row["throttle_position__mean"], 0, 100))
 
-        st.markdown(
-            toolbar("LIU-ICE", float(row["window_end_s"]), "sensor_drift" if confirmed else "healthy", 0,
-                    float(replay.frame["window_end_s"].iloc[-1])),
-            unsafe_allow_html=True,
-        )
         kpis = st.columns(4)
         measured_cards = (
-            ("Measured engine speed", f"{measured_rpm:,.0f}", "RPM", "LiU-ICE bench channel", "#d8aa32"),
-            ("Guard evidence", f"{evidence_now:.2f}", "×", "alarm limit = 1.00×", "#d78b80" if confirmed else "#d8aa32"),
-            ("Health index", f"{health_now:.0f}", "/ 100", "residual-derived indicator", "#f4c95d"),
-            ("Guard decision", "CONFIRMED" if confirmed else "MONITORING", "", replay.scenario["code"], "#d78b80" if confirmed else "#d8aa32"),
+            ("Measured engine speed", f"{measured_rpm:,.0f}", "RPM", "LiU-ICE bench channel", "#a9c4d4"),
+            ("Guard evidence", f"{evidence_now:.2f}", "×", "alarm limit = 1.00×", "#d78b80" if confirmed else "#a9c4d4"),
+            ("Health index", f"{health_now:.0f}", "/ 100", "residual-derived indicator", "#c5d6a0"),
+            ("Guard decision", "CONFIRMED" if confirmed else "MONITORING", "", replay.scenario["code"], "#d78b80" if confirmed else "#a9c4d4"),
         )
         for column, card in zip(kpis, measured_cards):
             column.markdown(metric_card(*card), unsafe_allow_html=True)
 
         history = replay.evidence.iloc[: cursor + 1]
         evidence_fig = go.Figure()
-        evidence_colours = {"f_pic": "#d8b453", "f_pim": "#9ba9ba", "f_waf": "#a1b3a2"}
+        evidence_colours = {"f_pic": "#a9c4d4", "f_pim": "#a5aab0", "f_waf": "#a1b3a2"}
         evidence_names = {"f_pic": "Intercooler pressure", "f_pim": "Manifold pressure", "f_waf": "Air mass flow"}
         for code in history:
             evidence_fig.add_trace(go.Scatter(
@@ -709,22 +543,18 @@ if section == "Measured guard":
                 line={"color": evidence_colours[code], "width": 2},
             ))
         evidence_fig.add_hline(y=1.0, line={"color": "#d78b80", "dash": "dash"}, annotation_text="alarm limit")
-        evidence_fig.add_vline(x=replay.injection_time, line={"color": "#f4c95d", "dash": "dot"}, annotation_text="injected bias")
+        evidence_fig.add_vline(x=replay.injection_time, line={"color": "#c5d6a0", "dash": "dot"}, annotation_text="injected bias")
         evidence_fig.update_layout(
-            title={"text": "MEASURED REDUNDANT-SENSOR EVIDENCE", "font": {"size": 13, "family": "Arial"}},
-            paper_bgcolor="rgba(7,23,34,.75)", plot_bgcolor="#151614", font={"color": "#b3b3aa", "family": "Arial"},
+            title={"text": "MEASURED REDUNDANT-SENSOR EVIDENCE", "font": {"size": 13, "family": "Helvetica Neue, Helvetica, Arial"}},
+            paper_bgcolor="rgba(19,20,22,.75)", plot_bgcolor="#101214", font={"color": "#9aa0a6", "family": "Helvetica Neue, Helvetica, Arial"},
             height=360, margin={"l": 35, "r": 18, "t": 54, "b": 38}, legend={"orientation": "h", "y": 1.14},
-            xaxis={"title": "run time · seconds", "gridcolor": "#30312d"},
-            yaxis={"title": "residual / learned healthy limit", "gridcolor": "#30312d", "rangemode": "tozero"},
+            xaxis={"title": "run time · seconds", "gridcolor": "#26292d"},
+            yaxis={"title": "residual / learned healthy limit", "gridcolor": "#26292d", "rangemode": "tozero"},
         )
         left, right = st.columns([1.72, 1.0], gap="small")
         with left:
             st.plotly_chart(evidence_fig, width="stretch", config={"displayModeBar": False})
             st.markdown(sensor_grid(replay.sensor_readings(cursor)), unsafe_allow_html=True)
         with right:
-            st.markdown(engine_panel("sensor_drift" if confirmed else "healthy", max(0.0, (100 - health_now) / 34), measured_rpm, measured_load), unsafe_allow_html=True)
-            state_text = "FAULT CONFIRMED" if confirmed else "CONSISTENCY CHECK ACTIVE"
-            st.markdown(
-                f'<div class="et-demo"><b>{state_text}</b><span>Decision requires 2 of 3 consecutive five-second windows and at least 1.25× evidence in the current window.</span></div>',
-                unsafe_allow_html=True,
-            )
+            st.iframe(engine_viewer_html("sensor_drift" if confirmed else "healthy", max(0.0, (100 - health_now) / 34), measured_rpm, measured_load), height=420)
+            st.caption("Decision requires 2 of 3 consecutive five-second windows and at least 1.25× evidence in the current window.")

@@ -25,7 +25,7 @@ def test_fault_selection_survives_a_reloaded_result_class(monkeypatch):
 
     app = AppTest.from_file(str(ROOT / "app.py"), default_timeout=180)
     app.session_state["entered_engine_twin"] = True
-    app.session_state["workspace_section"] = "Sensor fusion"
+    app.session_state["workspace_section"] = "Diagnosis"
     app.run()
     assert not app.exception
     for fault in FAULTS:
